@@ -134,6 +134,13 @@ const url = process.env.GAME_URL || "http://127.0.0.1:4173/hanmo-strategy/";
     // Choose legal actions using read-only rules; every actual state mutation is a UI click.
     for (let round = 0; round < 16; round++) {
       console.log("UI 戰術階段", round + 1);
+      // Play the actual battle in portrait, landscape, and desktop, not only resize it.
+      const viewport = [
+        { width: 412, height: 915 },
+        { width: 915, height: 412 },
+        { width: 1440, height: 1080 },
+      ][round % 3];
+      await page.setViewportSize(viewport);
       state = await read();
       b = state.pendingBattle;
       if (b.status !== "active") break;
@@ -231,8 +238,8 @@ const url = process.env.GAME_URL || "http://127.0.0.1:4173/hanmo-strategy/";
       .filter((u) => u.side === "attacker")
       .reduce((n, u) => n + u.troops, 0);
     await page.getByRole("button", { name: "結算戰果 · 返回戰略地圖" }).click();
-    const skip = page.getByRole("button", { name: "略過交戰動畫" });
-    if (await skip.isVisible()) await skip.click();
+    // The report animation may finish while a viewport transition settles.
+    // Wait for the real final report instead of racing an optional short-lived button.
     await page.getByRole("button", { name: "收閱戰報" }).click();
     const finished = await read();
     assert.equal(finished.pendingBattle, null);
