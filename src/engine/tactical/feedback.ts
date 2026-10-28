@@ -10,6 +10,7 @@ export function recordCombat(
   after: number,
   multiplier = 1,
   success = true,
+  parentSequence?: number,
 ) {
   const sequence = (b.feedbackSequence ?? 0) + 1;
   const casualties = before - after,
@@ -23,10 +24,12 @@ export function recordCombat(
       ? `${source}對${recipient}火計${success ? "成功" : "失敗"}，造成 ${casualties.toLocaleString("zh-TW")} 傷亡${after === 0 ? "，部隊潰滅" : ""}。`
       : kind === "gate"
         ? `${source}攻擊城門，耐久 −${casualties.toLocaleString("zh-TW")}${after === 0 ? "，城門已破" : ""}。`
-        : `${source}${relation === "advantage" ? "克制" : relation === "disadvantage" ? "逆勢攻擊" : "攻擊"}${recipient}，造成 ${casualties.toLocaleString("zh-TW")} 傷亡${after === 0 ? "，部隊潰滅" : ""}。`;
+        : `${source}${kind === "retaliation" ? "反擊，" : ""}${relation === "advantage" ? "克制" : relation === "disadvantage" ? "逆勢攻擊" : "攻擊"}${recipient}，造成 ${casualties.toLocaleString("zh-TW")} 傷亡${after === 0 ? "，部隊潰滅" : ""}。`;
   const event: CombatFeedback = {
     sequence,
     kind,
+    phase: b.phase,
+    ...(parentSequence === undefined ? {} : { parentSequence }),
     attackerId: u.id,
     targetId: target?.id ?? null,
     target: target
@@ -69,7 +72,7 @@ export function validCombatFeedback(b: TacticalState): boolean {
   if (
     !Number.isSafeInteger(b.feedbackSequence) ||
     b.feedbackSequence! < 0 ||
-    b.feedbackSequence! > T.maxTurns * 6 ||
+    b.feedbackSequence! > T.maxTurns * 12 ||
     !Array.isArray(b.combatFeedback) ||
     b.combatFeedback.length > T.feedbackLimit
   )
@@ -82,7 +85,7 @@ export function validCombatFeedback(b: TacticalState): boolean {
       !Number.isSafeInteger(f.sequence) ||
       f.sequence <= sequence ||
       f.sequence > b.feedbackSequence! ||
-      !["attack", "fire", "gate"].includes(f.kind)
+      !["attack", "fire", "gate", "retaliation"].includes(f.kind)
     )
       return false;
     const source = b.units.find((u) => u.id === f.attackerId),
@@ -137,7 +140,35 @@ export function validCombatFeedback(b: TacticalState): boolean {
       f.after < target.troops
     )
       return false;
-    if (f.kind === "attack" && !f.success) return false;
+    if (f.phase !== undefined && !["attacker", "defender"].includes(f.phase))
+      return false;
+    if ((f.kind === "attack" || f.kind === "retaliation") && !f.success)
+      return false;
+    if (f.kind === "retaliation") {
+      if (
+        f.phase === undefined ||
+        f.phase === f.side ||
+        f.parentSequence !== f.sequence - 1
+      )
+        return false;
+      const parent = b.combatFeedback.find(
+        (p) => p.sequence === f.parentSequence,
+      );
+      // A truncated feedback window may start with a retaliation.
+      if (
+        parent &&
+        (parent.kind !== "attack" ||
+          parent.attackerId !== f.targetId ||
+          parent.targetId !== f.attackerId ||
+          parent.turn !== f.turn ||
+          parent.phase !== f.phase)
+      )
+        return false;
+    } else if (
+      f.parentSequence !== undefined ||
+      (f.phase !== undefined && f.phase !== f.side)
+    )
+      return false;
     if (
       f.kind === "fire" &&
       (f.matchup !== 1 || (!f.success && f.casualties !== 0))

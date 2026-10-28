@@ -11,6 +11,8 @@ import {
   exportSave,
 } from "../engine/save";
 import { WorldMap } from "../components/WorldMap";
+import { CityOverview } from "../components/CityOverview";
+import { cityReadiness } from "../components/cityOverview";
 import { CityPanel } from "../components/CityPanel";
 import { OfficerPanel } from "../components/OfficerPanel";
 import { actionFeedback } from "../components/actionSelection";
@@ -34,6 +36,29 @@ export default function App() {
     cityId: string;
     text: string;
   } | null>(null);
+  const [tab, setTab] = useState<"world" | "city" | "officers" | "intel">(
+    "world",
+  );
+  const paneScroll = useRef<Partial<Record<typeof tab, number>>>({});
+  const campaignRef = useRef<HTMLElement>(null);
+  function changeTab(next: typeof tab) {
+    const pane = campaignRef.current?.querySelector<HTMLElement>(
+      `[data-pane="${tab}"]`,
+    );
+    if (pane) paneScroll.current[tab] = pane.scrollTop;
+    setTab(next);
+    requestAnimationFrame(() => {
+      const nextPane = campaignRef.current?.querySelector<HTMLElement>(
+        `[data-pane="${next}"]`,
+      );
+      if (nextPane) nextPane.scrollTop = paneScroll.current[next] ?? 0;
+    });
+  }
+  function selectCity(id: string, open = false) {
+    setSelected(id);
+    setTarget(undefined);
+    if (open) changeTab("city");
+  }
   const [selected, setSelected] = useState(""),
     [target, setTarget] = useState<string>(),
     [report, setReport] = useState<Battle | null>(null);
@@ -57,6 +82,8 @@ export default function App() {
   }, [game]);
   function enter(s: GameState) {
     setGame(s);
+    setTab("world");
+    paneScroll.current = {};
     setActionNotice(null);
     setSelected(
       s.cities.find((c) => c.ownerId === s.playerId)?.id ?? s.cities[0].id,
@@ -73,7 +100,7 @@ export default function App() {
     }
     setGame(result.state);
     const feedback = actionFeedback(game, result.state, a);
-    setNotice(feedback);
+    setNotice("");
     setActionNotice({ cityId: a.cityId, text: feedback });
     if (a.type === "attack") setReport(result.state.battles[0]);
     setTarget(undefined);
@@ -187,14 +214,16 @@ export default function App() {
             漢末群雄志<small>群雄對峙・建安十九年</small>
           </span>
         </a>
-        <span className="version">V0.2.1</span>
+        <span className="version">V0.2.2</span>
         {game && (
           <>
             <div className="date">
               {game.year} 年 <strong>{game.month} 月</strong>
               <small>
                 建安群雄 · {factions.find((f) => f.id === game.playerId)!.name}
-                軍
+                軍 ·{" "}
+                {game.cities.filter((c) => c.ownerId === game.playerId).length}
+                ／12 城
               </small>
             </div>
             <button
@@ -303,7 +332,7 @@ export default function App() {
           onFinish={finishBattle}
         />
       ) : (
-        <main className="campaign">
+        <main className="campaign" data-tab={tab} ref={campaignRef}>
           <nav className="toolbar">
             <span>
               第 {game.turn + 1} 回合 ·{" "}
@@ -320,30 +349,123 @@ export default function App() {
             </div>
           </nav>
           <div className="strategy-layout">
-            <WorldMap
-              state={game}
-              selected={selected || game.cities[0].id}
-              target={target}
-              onSelect={(id) => {
-                setSelected(id);
-                setTarget(undefined);
-              }}
-            />
-            {city && (
-              <CityPanel
+            <section
+              className="strategy-pane world-pane"
+              data-pane="world"
+              data-active={tab === "world"}
+              aria-label="天下"
+            >
+              {city && (
+                <div className="city-quick-info">
+                  <div>
+                    <strong>
+                      {city.name} ·{" "}
+                      {game.factions.find((f) => f.id === city.ownerId)?.name}軍
+                    </strong>
+                    <span>
+                      兵 {city.troops.toLocaleString("zh-TW")} ·{" "}
+                      {city.ownerId === game.playerId
+                        ? cityReadiness(game, city).reason
+                        : "敵軍城池"}
+                    </span>
+                  </div>
+                  <button className="primary" onClick={() => changeTab("city")}>
+                    {city.ownerId === game.playerId ? "開啟城務" : "查看敵情"}
+                  </button>
+                </div>
+              )}
+              <WorldMap
                 state={game}
-                city={city}
-                onManual={manual}
-                onAction={act}
-                feedback={
-                  actionNotice?.cityId === city.id ? actionNotice.text : ""
-                }
-                locked={busy}
-                onTarget={setTarget}
+                selected={selected || game.cities[0].id}
+                target={target}
+                onSelect={(id) => {
+                  selectCity(id);
+                }}
               />
-            )}
+              <CityOverview
+                state={game}
+                selected={selected}
+                onSelect={(id) => selectCity(id, true)}
+              />
+            </section>
+            <section
+              className="strategy-pane city-pane"
+              data-pane="city"
+              data-active={tab === "city"}
+              aria-label="城務"
+            >
+              {city && (
+                <label className="city-switch">
+                  目前城池
+                  <select
+                    aria-label="切換己方城池"
+                    value={selected}
+                    onChange={(e) => selectCity(e.target.value)}
+                  >
+                    {city.ownerId !== game.playerId && (
+                      <option value={city.id}>{city.name}（敵城）</option>
+                    )}
+                    {game.cities
+                      .filter((c) => c.ownerId === game.playerId)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} · {c.actions} 令 ·{" "}
+                          {cityReadiness(game, c).ready} 將待命
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              )}
+              {city && (
+                <CityPanel
+                  state={game}
+                  city={city}
+                  onManual={manual}
+                  onAction={act}
+                  feedback={
+                    actionNotice?.cityId === city.id ? actionNotice.text : ""
+                  }
+                  locked={busy}
+                  onTarget={setTarget}
+                  onSelect={(id) => selectCity(id, true)}
+                />
+              )}
+            </section>
           </div>
-          <section className="event-panel">
+          <section
+            className="strategy-pane officers-pane"
+            data-pane="officers"
+            data-active={tab === "officers"}
+            aria-label="武將"
+          >
+            <h2>己方武將 · 待命與駐地</h2>
+            {game.cities
+              .filter((c) => c.ownerId === game.playerId)
+              .map((c) => (
+                <section className="officer-city" key={c.id}>
+                  <button onClick={() => selectCity(c.id, true)}>
+                    {c.name} → 城務 · {cityReadiness(game, c).ready} 將待命
+                  </button>
+                  <OfficerPanel
+                    officers={game.officers.filter(
+                      (o) => o.cityId === c.id && o.factionId === game.playerId,
+                    )}
+                    compact
+                  />
+                </section>
+              ))}
+          </section>
+          <section
+            className="event-panel strategy-pane"
+            data-pane="intel"
+            data-active={tab === "intel"}
+          >
+            <div className="intel-tools">
+              <button onClick={() => setAllOfficers(true)}>天下武將</button>
+              <button disabled={busy} onClick={() => setRestart(true)}>
+                新遊戲
+              </button>
+            </div>
             <h3>
               軍國紀事 <small>最新消息在前 · 最多保留 160 則</small>
             </h3>
@@ -368,10 +490,29 @@ export default function App() {
               ))}
             </details>
           </section>
+          <nav className="mobile-tabs" aria-label="戰略分頁" role="tablist">
+            {(
+              [
+                ["world", "天下"],
+                ["city", "城務"],
+                ["officers", "武將"],
+                ["intel", "軍情"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => changeTab(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
         </main>
       )}
       <footer>
-        漢末群雄志 · 原創山河與人物徽章 ／ V0.2.1{" "}
+        漢末群雄志 · 原創山河與人物徽章 ／ V0.2.2{" "}
         <span>
           {game && !saveError ? "進度已自動儲存" : "本機存檔 · 無跨裝置同步"}
         </span>

@@ -31,16 +31,17 @@ const path = require("node:path");
       await new Promise((r) => setTimeout(r, 250));
     }
     if (!ready) throw Error("正式產物預覽無法啟動");
-    const child = spawn(
-      process.execPath,
-      [path.join(__dirname, "browser-v021.cjs")],
-      { stdio: "inherit", env: { ...process.env, GAME_URL: url } },
-    );
-    const code = await new Promise((resolve, reject) => {
-      child.on("error", reject);
-      child.on("exit", resolve);
-    });
-    if (code !== 0) throw Error(`瀏覽器 smoke 失敗 (${code})`);
+    for (const script of ["browser-v021.cjs", "browser-v022.cjs"]) {
+      const child = spawn(process.execPath, [path.join(__dirname, script)], {
+        stdio: "inherit",
+        env: { ...process.env, GAME_URL: url },
+      });
+      const code = await new Promise((resolve, reject) => {
+        child.on("error", reject);
+        child.on("exit", resolve);
+      });
+      if (code !== 0) throw Error(`${script} smoke 失敗 (${code})`);
+    }
   } finally {
     server.kill("SIGTERM");
   }

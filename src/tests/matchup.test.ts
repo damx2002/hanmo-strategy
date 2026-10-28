@@ -7,7 +7,6 @@ import {
   damagePreview,
   matchupMultiplier,
 } from "../engine/tactical/damage";
-import { T } from "../engine/tactical/tacticalBalance";
 import { tacticalDispatch } from "../engine/tactical/actions";
 import { runTacticalPhase } from "../engine/tactical/ai";
 import {
@@ -77,9 +76,7 @@ describe("實際兵種克制與平衡", () => {
           v = { ...b.units[3], type: d, troops: 1000 };
         const real = estimateDamage(b, u, v);
         expect(real).toBeGreaterThan(0);
-        expect(real).toBeLessThanOrEqual(
-          Math.ceil(v.troops * T.absoluteMaxLoss),
-        );
+        expect(real).toBeLessThanOrEqual(v.troops);
         expect(estimateDamage(b, { ...u, troops: 2000 }, v)).toBeGreaterThan(
           estimateDamage(b, { ...u, troops: 500 }, v),
         );
@@ -107,14 +104,18 @@ describe("實際兵種克制與平衡", () => {
       }
     },
   );
-  it("傷害上限保留克制差異，大軍單擊最多六成；一兵仍不能消滅大軍", () => {
+  it("連續傷害保留克制差異，懸殊兵力可重創；一兵仍不能消滅大軍", () => {
     const b = duel(),
       u = { ...b.units[0], troops: 999999, type: "infantry" as const },
       v = { ...b.units[3], troops: 1000, type: "cavalry" as const };
     const advantage = estimateDamage(b, u, v),
       neutral = estimateDamage(b, { ...u, type: "cavalry" }, v);
-    expect(advantage).toBeGreaterThan(neutral);
-    expect(advantage).toBe(520);
+    expect(advantage).toBeGreaterThanOrEqual(neutral);
+    expect(estimateDamage(b, { ...u, troops: 1000 }, v)).toBeGreaterThan(
+      estimateDamage(b, { ...u, type: "cavalry", troops: 1000 }, v),
+    );
+    expect(advantage).toBeGreaterThan(950);
+    expect(advantage).toBeLessThanOrEqual(v.troops);
     expect(estimateDamage(b, { ...u, troops: 1 }, v)).toBeLessThan(10);
     expect(estimateDamage(b, { ...u, troops: 1 }, v)).toBeGreaterThanOrEqual(1);
     expect(estimateDamage(b, u, { ...v, troops: 50 })).toBe(50);
@@ -143,7 +144,7 @@ describe("實際兵種克制與平衡", () => {
       targetId: b.units[3].id,
     });
     expect(r.ok).toBe(true);
-    const f = r.battle.combatFeedback!.at(-1)!;
+    const f = r.battle.combatFeedback!.find((f) => f.kind === "attack")!;
     expect(f.casualties).toBeGreaterThanOrEqual(p.min);
     expect(f.casualties).toBeLessThanOrEqual(p.max);
     expect(r.battle.seed).not.toBe(b.seed);
@@ -153,7 +154,7 @@ describe("戰況事件只有引擎真實結果", () => {
   it("目標座標、傷亡、前後兵力與克制一致，潰滅仍保留目標座標", () => {
     const b = duel();
     b.units[3].type = "cavalry";
-    b.units[3].troops = 50;
+    b.units[3].troops = 1;
     const r = tacticalDispatch(b, {
       type: "attack",
       unitId: b.units[0].id,
@@ -166,16 +167,16 @@ describe("戰況事件只有引擎真實結果", () => {
       attackerId: "attacker-0",
       targetId: "defender-0",
       target: { x: 3, y: 2 },
-      before: 50,
+      before: 1,
       after: 0,
-      casualties: 50,
+      casualties: 1,
       matchup: 1.3,
       relation: "advantage",
       destroyed: true,
     });
     expect(f.text).toContain("潰滅");
     expect(r.battle.units[3].troops).toBe(f.after);
-    expect(b.units[3].troops).toBe(50);
+    expect(b.units[3].troops).toBe(1);
   });
   it.each([1, 1600])("火計種子 %s：成功失敗都記錄，不套兵種克制", (seed) => {
     const b = duel();

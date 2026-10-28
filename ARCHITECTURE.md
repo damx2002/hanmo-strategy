@@ -106,3 +106,30 @@ GAME_URL=http://127.0.0.1:4173/hanmo-strategy/ PLAYWRIGHT_MODULE=/tmp/hanmo-brow
 smoke以明確戰場前置狀態測試三組克制／中立／劣勢的預覽與正式傷亡、邊角浮字不裁切、不攔觸控、不捲頁、火計成功失敗、略過與減少動態、敵軍各筆摘要、部隊接續、全軍完成、持久化關閉重開及V1/V2相容。前置配置不是戰果：所有傷害都由實際UI點擊透過引擎產生，對照存檔前後及事件。原 browser-v020.cjs 仍保留從正常開局合法集兵到戰勝回寫的整場驗收。
 
 CI在原型別／測試／建置後執行此smoke，再允許上傳Pages產物；失敗會保存截圖。沒有新增正式執行依賴或改動既有戰鬥結算／經濟流程。
+
+## V0.2.2 接戰與戰略介面
+
+- damage.ts 的連續函式及estimateExchange是主擊／被動反擊唯一來源。estimateRetaliation忽略守方主動旗標，只允許存活雙方相鄰接戰，效率集中tacticalBalance；不使用遞迴dispatch。
+- tacticalDispatch一次抽seed、計算雙方交換、各扣一次、記兩筆回饋後checkBattle。AI位置／目標選擇以共用交換值扣反擊風險，無額外特權。damagePreview純讀取，提供主擊範圍與反擊安全範圍。
+- CombatFeedback的kind增加retaliation，可選phase辨認「敵軍主動階段中的我方反擊」，parentSequence關聯主擊。舊事件無phase仍依side呈現，舊存檔不回填或重算。驗證仍核對整數傷亡／順序／對象／parent；序號上限提高至16×12，容納每方3隊主擊及其反擊。最近24筆限制不變。
+- App維持單一GameState；tab、選城及每頁scroll只屬UI。手機四個pane保持掛載，CSS切換可見性，不卸載城務表單。行動成功不建立全域訊息條；本地固定高度回饋保留觸控位置。desktop CSS仍顯示地圖及城務雙欄。
+- CityOverview.tsx、cityOverview.ts提供城池總覽與可操作原因；鄰城出征資格透過既有validateExpedition驗證，UI不另創成本規則。EnemyApproaches不呈現內政指令。
+- mobile root採100dvh、內容pane內捲動、導覽列位於正常flex流尾端及safe-area；overlay固定於viewport並提高z-index，避免被頂底欄或內容捲軸遮住。TacticalBattle不套用策略分頁CSS。
+
+### V0.2.2 驗證與舊斷言調整
+
+保留97個原測試案例，新增22個為119個。原40%／60%上限斷言依本次明確要求改為連續比例、整數界線與優勢可重創；既有潰滅案例改以1兵測試收尾，另新增6000對200／1000真實損失，並非保留舊百人收尾特權。新增反擊後，原讀取「最後事件」的主擊斷言改依kind查找主擊；未刪除任何測試或放寬統一勝利條件。
+
+retaliation.test.ts涵蓋四比例、保護效果、步騎／弓反擊、生還計算、一次限制、遠射／火計排除、seed／預覽雙方精確兵損、極端整數、AI、四代固定存檔、續戰及一次結算、城池原因與鄰城出征。v0.2.1-battle-save.json由修改前的V0.2.1引擎產生，含原版傷亡／事件，防止用新引擎冒充相容樣本。
+
+CI的npm run test:browser依序跑browser-v021（保留全部舊範圍，增加兩格真實反擊／預覽檢查）及browser-v022（四分頁、選城與表單／捲動保留、真正開墾成本、敵情／鄰城、軍議與總覽、狀態差異、縮放、三個手機尺寸與桌面雙欄）。失敗上傳兩套截圖。另跑保留的browser-v020正常開局整場UI勝利與關閉重開。沒有新增套件依賴。
+
+## V0.3.0 可暫停守城流程的擴充邊界（僅設計）
+
+目前endMonth同步依固定勢力順序runAI，再月結／換月，不能在中途直接await彈窗。未來需拆成純函式startMonthResolution／advanceMonthResolution，並在GameState以明確可驗證的TurnResolution保存年月、固定處理順序、勢力及城池cursor、該國已出征標記、當月待執行項目、已完成標記與seed。每個advance只能提交一個有界步驟，UI是暫停結果的展示者，不能用計時器決定執行到哪裡。
+
+runAI應能產生合法意圖（內政、調動、出征），由共同dispatch／expedition驗證後逐步提交；遇到攻打玩家城池時，保存pendingDefense並停在原cursor，發出攻城警報，阻擋新的月結及無關世界指令。玩家選親守／委任／合法相鄰友城援軍後，才以唯一battle ID及reservation記錄正式扣一次兵糧與行動，保存攻守方、援軍來源／兵數／成本／預留與回收規則，再建立同一戰術生命週期。警報取消或重新整理不得跳過該AI意圖，也不得重新抽種子。
+
+expedition的validate／reserve／settle可擴為帶source/defender/reinforcement reservations的計畫，保持共享兵力守恆；守城戰敗只在已完成結果套用時易主。settle需一次套用完成battle ID，清pending後才推進該cursor；同一存檔同一步重播必為拒絕或冪等，不能因React effect或Chrome重開再次reserve。AI每國每月最多一次主動出征及原有內政／經濟順序仍記在checkpoint。
+
+只有所有AI意圖完成後才執行全城經濟、年月前進與行動重置，並保存經濟已提交標記；戰鬥暫停時這些步驟都不能提前執行。需另定新schema遷移與損毀checkpoint復原，測試警報前後、預留前後、援軍中途、結算前後、月結提交前後的關閉續玩及重複提交。本版僅記錄此擴充方式，沒有加入手動防守或可暫停月結。

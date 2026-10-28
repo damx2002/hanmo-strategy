@@ -7,7 +7,7 @@ import type {
 import { reachable, distance } from "./movement";
 import {
   canAttack,
-  estimateDamage,
+  estimateExchange,
   fireReason,
   fireChance,
   matchupMultiplier,
@@ -136,7 +136,13 @@ export function tacticalDispatch(
         return fail("目標超出射程、已潰滅或本部隊已攻擊。");
       const [r, next] = random(b.seed);
       b.seed = next;
-      const loss = estimateDamage(b, u, v, T.randomMin + r * T.randomRange);
+      const exchange = estimateExchange(
+        b,
+        u,
+        v,
+        T.randomMin + r * T.randomRange,
+      );
+      const loss = exchange.damage;
       const before = v.troops;
       v.troops -= loss;
       u.attacked = true;
@@ -149,6 +155,24 @@ export function tacticalDispatch(
         v.troops,
         matchupMultiplier(u.type, v.type),
       );
+      if (exchange.retaliation > 0) {
+        const parent = b.feedbackSequence!;
+        const ownBefore = u.troops;
+        u.troops -= exchange.retaliation;
+        text +=
+          " " +
+          recordCombat(
+            b,
+            v,
+            u,
+            "retaliation",
+            ownBefore,
+            u.troops,
+            matchupMultiplier(v.type, u.type),
+            true,
+            parent,
+          );
+      }
     } else {
       const reason = fireReason(b, u, v);
       if (reason) return fail(reason);

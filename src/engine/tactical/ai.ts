@@ -1,6 +1,12 @@
 import type { TacticalState, Side } from "./types";
 import { tacticalDispatch } from "./actions";
-import { canAttack, estimateDamage, fireReason, fireChance } from "./damage";
+import {
+  canAttack,
+  estimateDamage,
+  estimateExchange,
+  fireReason,
+  fireChance,
+} from "./damage";
 import { reachable, distance } from "./movement";
 import { T } from "./tacticalBalance";
 export function runTacticalPhase(
@@ -9,6 +15,13 @@ export function runTacticalPhase(
 ): TacticalState {
   if (battle.status !== "active" || battle.phase !== side) return battle;
   let b = battle;
+  const value = (
+    unit: TacticalState["units"][number],
+    target: TacticalState["units"][number],
+  ) => {
+    const e = estimateExchange(b, unit, target);
+    return e.damage - e.retaliation * T.aiCounterRisk;
+  };
   const ids = b.units
     .filter((u) => u.side === side && u.troops > 0)
     .map((u) => u.id);
@@ -19,13 +32,17 @@ export function runTacticalPhase(
     const candidates = [{ x: u.x, y: u.y, cost: 0 }, ...reachable(b, u)];
     const foes = b.units.filter((v) => v.side !== side && v.troops > 0);
     function score(p: { x: number; y: number }) {
-      const candidate = { ...u, ...p },
+      const candidate = {
+          ...u,
+          ...p,
+          moved: u.moved || p.x !== u.x || p.y !== u.y,
+        },
         type = b.map[p.y][p.x];
       const attack = Math.max(
         0,
         ...foes
           .filter((v) => canAttack(b, candidate, v))
-          .map((v) => estimateDamage(b, candidate, v) * T.aiDamage),
+          .map((v) => value(candidate, v) * T.aiDamage),
       );
       const closest = Math.min(...foes.map((v) => distance(p, v)));
       const range =
@@ -82,12 +99,11 @@ export function runTacticalPhase(
       )[0];
     const target = targets
       .filter((v) => canAttack(b, u, v))
-      .sort((a, c) => estimateDamage(b, u, c) - estimateDamage(b, u, a))[0];
+      .sort((a, c) => value(u, c) - value(u, a))[0];
     const action =
       fire &&
       (!target ||
-        fireChance(b, u, fire) * fire.troops * T.fireLoss >
-          estimateDamage(b, u, target))
+        fireChance(b, u, fire) * fire.troops * T.fireLoss > value(u, target))
         ? { type: "fire" as const, unitId: id, targetId: fire.id }
         : target
           ? { type: "attack" as const, unitId: id, targetId: target.id }

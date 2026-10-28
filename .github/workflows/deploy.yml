@@ -23,7 +23,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
-      - name: Chromium 傷亡與手機回歸
+      - name: Chromium 戰鬥、反擊與手機分頁回歸
         env:
           CHROMIUM_PATH: /usr/bin/google-chrome
         run: npm run test:browser
@@ -32,7 +32,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ui-smoke-failure
-          path: /tmp/hanmo-v021-failure.png
+          path: |
+            /tmp/hanmo-v021-failure.png
+            /tmp/hanmo-v022-failure.png
           if-no-files-found: ignore
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

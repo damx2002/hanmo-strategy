@@ -20,10 +20,20 @@ export function CombatReadout({
     battle.phase === "attacker" && mode === "attack" && selected
       ? battle.units.filter((v) => canAttack(battle, selected, v))
       : [];
-  const enemies =
-    last?.side === "defender"
-      ? list.filter((f) => f.side === "defender" && f.turn === last.turn)
-      : [];
+  const enemyPhase = (last?.phase ?? last?.side) === "defender";
+  const exchanges = last
+    ? list.filter((f) =>
+        enemyPhase
+          ? (f.phase ?? f.side) === "defender" && f.turn === last.turn
+          : f.sequence === last.sequence ||
+            (last.kind === "retaliation" && f.sequence === last.parentSequence),
+      )
+    : [];
+  const total = (side: "attacker" | "defender") =>
+    exchanges
+      .filter((f) => f.kind !== "gate" && f.side !== side)
+      .reduce((n, f) => n + f.casualties, 0)
+      .toLocaleString("zh-TW");
   return (
     <div
       className="combat-live"
@@ -44,25 +54,35 @@ export function CombatReadout({
                   敵{troopNames[v.type]}：{p.min.toLocaleString("zh-TW")}–
                   {p.max.toLocaleString("zh-TW")} 傷亡 ·{" "}
                   {relationNames[p.relation]} ×{p.multiplier.toFixed(2)}
+                  <span className="counter-preview">
+                    {" "}
+                    · 遭反擊 {p.counterMin.toLocaleString("zh-TW")}–
+                    {p.counterMax.toLocaleString("zh-TW")}
+                  </span>
                 </li>
               );
             })}
           </ul>
         </>
-      ) : enemies.length ? (
+      ) : exchanges.length ? (
         <>
           <strong className="enemy-round-title">
-            敵軍回擊 · 第 {last!.turn} 回合
+            {enemyPhase ? "敵軍回擊" : "本次接戰"} · 第 {last!.turn} 回合 · 我損{" "}
+            {total("attacker")}／敵損 {total("defender")}
           </strong>
           <ul className="enemy-results">
-            {enemies.map((f) => {
+            {exchanges.map((f) => {
               const source = battle.units.find((u) => u.id === f.attackerId)!,
                 target = battle.units.find((u) => u.id === f.targetId);
               return (
                 <li key={f.sequence} data-feedback-seq={f.sequence}>
-                  {troopNames[source.type]} →{" "}
-                  {target ? `我軍${troopNames[target.type]}` : "城門"} −
-                  {f.casualties.toLocaleString("zh-TW")} ·{" "}
+                  {source.side === "attacker" ? "我軍" : "敵軍"}
+                  {troopNames[source.type]}
+                  {f.kind === "retaliation" ? "反擊" : "攻擊"} →{" "}
+                  {target
+                    ? `${target.side === "attacker" ? "我軍" : "敵軍"}${troopNames[target.type]}`
+                    : "城門"}{" "}
+                  −{f.casualties.toLocaleString("zh-TW")} ·{" "}
                   {f.kind === "fire"
                     ? `火計${f.success ? "成功" : "失敗"}`
                     : relationNames[f.relation]}

@@ -124,11 +124,9 @@ export function ActionPanel({
       <h3>
         施政軍令 <span>本月剩餘 {city.actions}／3</span>
       </h3>
-      {feedback && (
-        <p className="action-feedback" role="status">
-          {feedback}
-        </p>
-      )}
+      <p className="action-feedback" role="status">
+        {feedback || "下令後將在此顯示實際成果。"}
+      </p>
       <div className="command-grid">
         {(Object.keys(actionNames) as (keyof typeof actionNames)[]).map((t) => (
           <button

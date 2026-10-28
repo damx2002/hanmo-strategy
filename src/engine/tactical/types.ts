@@ -23,7 +23,10 @@ export interface Commander {
 }
 export interface CombatFeedback {
   sequence: number;
-  kind: "attack" | "fire" | "gate";
+  kind: "attack" | "fire" | "gate" | "retaliation";
+  /** Present on new records; optional for V0.2.1 saves. */
+  phase?: Side;
+  parentSequence?: number;
   attackerId: string;
   targetId: string | null;
   target: { x: number; y: number };

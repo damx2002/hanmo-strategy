@@ -85,6 +85,24 @@ export function TacticalMap({
                 ),
                 hit = hits.at(-1),
                 loss = hits.reduce((n, f) => n + f.casualties, 0);
+              const pair =
+                hit?.kind === "retaliation"
+                  ? feedback?.find((f) => f.sequence === hit.parentSequence)
+                  : feedback?.find(
+                      (f) =>
+                        f.kind === "retaliation" &&
+                        f.parentSequence === hit?.sequence,
+                    );
+              // Spread horizontal exchange labels away from one another; both
+              // remain anchored to the true hit cells, with edge clamps in CSS.
+              const spread =
+                pair?.target.y === y
+                  ? pair.target.x > x
+                    ? "float-left"
+                    : pair.target.x < x
+                      ? "float-right"
+                      : ""
+                  : "";
               return (
                 <button
                   key={`${x}-${y}`}
@@ -160,7 +178,7 @@ export function TacticalMap({
                   {hit && (
                     <span
                       key={hit.sequence}
-                      className={`combat-hit ${skip ? "skip-motion" : ""} hit-${hit.kind}`}
+                      className={`combat-hit ${spread} ${skip ? "skip-motion" : ""} hit-${hit.kind}`}
                       data-combat-seq={hit.sequence}
                       data-casualties={loss}
                       data-target-x={x}
@@ -171,14 +189,16 @@ export function TacticalMap({
                       <span className="damage-float">
                         <b>
                           {hits.length > 1
-                            ? `${hits.length}次受擊${hits.some((f) => f.relation === "advantage") ? "・含克制" : ""}`
-                            : hit.kind === "fire"
-                              ? `火計${hit.success ? "成功" : "失敗"}`
-                              : hit.kind === "gate"
-                                ? "城門"
-                                : hits.some((f) => f.relation === "advantage")
-                                  ? "兵種克制！"
-                                  : ""}
+                            ? `${hits.length}次受擊${hits.some((f) => f.kind === "retaliation") ? "・含反擊" : hits.some((f) => f.relation === "advantage") ? "・含克制" : ""}`
+                            : hit.kind === "retaliation"
+                              ? "反擊傷亡"
+                              : hit.kind === "fire"
+                                ? `火計${hit.success ? "成功" : "失敗"}`
+                                : hit.kind === "gate"
+                                  ? "城門"
+                                  : hits.some((f) => f.relation === "advantage")
+                                    ? "兵種克制！"
+                                    : ""}
                         </b>
                         <strong>
                           {hits.length > 1 ? "合計 " : ""}−

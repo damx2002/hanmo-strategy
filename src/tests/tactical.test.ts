@@ -199,19 +199,21 @@ describe("真實傷害與火計", () => {
       const d = estimateDamage(b, { ...u, troops: n }, v);
       expect(Number.isSafeInteger(d)).toBe(true);
       expect(d).toBeGreaterThan(0);
-      expect(d).toBeLessThanOrEqual(Math.ceil(v.troops * T.maxLoss));
+      expect(d).toBeLessThanOrEqual(v.troops);
     }
   });
   it("少量殘兵可被優勢部隊擊潰，一兵仍不能無條件殺百人", () => {
     const b = board(),
       u = b.units[0],
-      v = { ...b.units[3], troops: 50 };
-    expect(estimateDamage(b, u, v)).toBe(50);
-    expect(estimateDamage(b, { ...u, troops: 1 }, v)).toBeLessThan(50);
-    const large = { ...v, troops: 5000 };
+      v = { ...b.units[3], troops: 1 };
+    expect(estimateDamage(b, u, v)).toBe(1);
     expect(
-      estimateDamage(b, { ...u, troops: 999999 }, large),
-    ).toBeLessThanOrEqual(2000);
+      estimateDamage(b, { ...u, troops: 1 }, { ...v, troops: 50 }),
+    ).toBeLessThan(50);
+    const large = { ...v, troops: 5000 };
+    expect(estimateDamage(b, { ...u, troops: 999999 }, large)).toBeGreaterThan(
+      4500,
+    );
   });
   it("森林、山丘、城防、兵種及平原衝鋒有實效", () => {
     const b = board(),

@@ -34,7 +34,9 @@ export function estimateDamage(
   u: Unit,
   v: Unit,
   variation = 1,
+  efficiency = 1,
 ) {
+  if (u.troops <= 0 || v.troops <= 0) return 0;
   const general = b.commanders.find((o) => o.id === u.commanderId),
     guard = b.commanders.find((o) => o.id === v.commanderId);
   const at =
@@ -59,19 +61,47 @@ export function estimateDamage(
   const shot =
     u.type === "archer" && b.map[u.y][u.x] === "hill" ? T.hillShot : 1;
   const matchup = matchupMultiplier(u.type, v.type);
-  return Math.min(
-    v.troops,
-    Math.max(
-      T.finishCap,
-      Math.ceil(
-        Math.min(
-          v.troops * T.absoluteMaxLoss,
-          Math.min(u.troops, v.troops) * T.maxLoss * matchup,
-        ),
-      ),
-    ),
-    Math.max(1, Math.floor((at * charge * shot * variation * matchup) / de)),
+  const raw = (at * charge * shot * variation * matchup * efficiency) / de;
+  // No fixed casualty ceiling: larger force ratios approach complete destruction,
+  // while equal armies, fortifications and terrain retain tactical depth.
+  const loss = (v.troops * raw) / (v.troops + T.saturation * raw);
+  return Math.min(v.troops, Math.max(1, Math.round(loss)));
+}
+// Passive contact only; archers use weak close defense rather than their ranged shot.
+export function canRetaliate(u: Unit, v: Unit) {
+  return (
+    u.troops > 0 && v.troops > 0 && u.side !== v.side && distance(u, v) === 1
   );
+}
+export function estimateRetaliation(
+  b: TacticalState,
+  defender: Unit,
+  attacker: Unit,
+  variation = 1,
+) {
+  if (!canRetaliate(defender, attacker)) return 0;
+  return estimateDamage(
+    b,
+    { ...defender, moved: false },
+    attacker,
+    variation,
+    T.retaliation[defender.type],
+  );
+}
+export function estimateExchange(
+  b: TacticalState,
+  u: Unit,
+  v: Unit,
+  variation = 1,
+) {
+  const damage = estimateDamage(b, u, v, variation);
+  const retaliation = estimateRetaliation(
+    b,
+    { ...v, troops: v.troops - damage },
+    u,
+    variation,
+  );
+  return { damage, retaliation };
 }
 export function fireReason(b: TacticalState, u: Unit, v?: Unit): string {
   if (u.troops <= 0 || u.attacked) return "部隊已行動或已潰滅";
@@ -109,6 +139,21 @@ export function damagePreview(b: TacticalState, u: Unit, v: Unit) {
   return {
     min: estimateDamage(b, u, v, T.randomMin),
     max: estimateDamage(b, u, v, T.randomMin + T.randomRange),
+    counterMin: estimateRetaliation(
+      b,
+      {
+        ...v,
+        troops: v.troops - estimateDamage(b, u, v, T.randomMin + T.randomRange),
+      },
+      u,
+      T.randomMin,
+    ),
+    counterMax: estimateRetaliation(
+      b,
+      { ...v, troops: v.troops - estimateDamage(b, u, v, T.randomMin) },
+      u,
+      T.randomMin + T.randomRange,
+    ),
     multiplier,
     relation: matchupRelation(multiplier),
   };

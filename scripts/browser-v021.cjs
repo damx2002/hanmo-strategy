@@ -64,7 +64,7 @@ const key = "hanmo-strategy-save-v2",
       b.units[1].troops = 0;
       b.units[2].troops = 0;
     }
-    if (kind === "kill") b.units[4].troops = 50;
+    if (kind === "kill") b.units[4].troops = 1;
     if (kind === "edge") {
       b.units[2].x = 5;
       b.units[2].y = 0;
@@ -175,7 +175,7 @@ const key = "hanmo-strategy-save-v2",
       const y = await page.evaluate(() => scrollY);
       await cell.click();
       const n = await read(),
-        f = n.pendingBattle.combatFeedback.at(-1);
+        f = n.pendingBattle.combatFeedback.find((f) => f.kind === "attack");
       assert.equal(
         f.casualties,
         v.troops - n.pendingBattle.units[target].troops,
@@ -183,6 +183,37 @@ const key = "hanmo-strategy-save-v2",
       assert.equal(f.relation, "advantage");
       const hit = await checkHit(f);
       assert.match(await hit.innerText(), /兵種克制/);
+      const counter = n.pendingBattle.combatFeedback.find(
+        (f) => f.kind === "retaliation",
+      );
+      assert.equal(
+        u.troops - n.pendingBattle.units[index].troops,
+        counter?.casualties ?? 0,
+      );
+      if (counter) {
+        assert.equal(counter.parentSequence, f.sequence);
+        assert.ok(
+          counter.casualties >= preview.counterMin &&
+            counter.casualties <= preview.counterMax,
+        );
+        const counterHit = await checkHit(counter);
+        assert.match(await counterHit.innerText(), /反擊傷亡/);
+        const ownBubble = await counterHit
+          .locator(".damage-float")
+          .boundingBox();
+        const enemyBubble = await hit.locator(".damage-float").boundingBox();
+        assert.ok(
+          ownBubble.x + ownBubble.width <= enemyBubble.x ||
+            enemyBubble.x + enemyBubble.width <= ownBubble.x ||
+            ownBubble.y + ownBubble.height <= enemyBubble.y ||
+            enemyBubble.y + enemyBubble.height <= ownBubble.y,
+          "主擊與反擊浮字不可重疊",
+        );
+        assert.equal(n.pendingBattle.units[target].attacked, v.attacked);
+        assert.match(await page.locator(".combat-live").innerText(), /反擊/);
+        if (width === 412)
+          await page.screenshot({ path: "/tmp/hanmo-v022-counter.png" });
+      }
       assert.equal(
         await page.evaluate(() => scrollY),
         y,
@@ -208,7 +239,9 @@ const key = "hanmo-strategy-save-v2",
         kind === "neutral" ? /兵種中立/ : /兵種劣勢/,
       );
       await tile(v.x, v.y).click();
-      const f = (await read()).pendingBattle.combatFeedback.at(-1);
+      const f = (await read()).pendingBattle.combatFeedback.find(
+        (f) => f.kind === "attack",
+      );
       assert.equal(f.relation, kind === "neutral" ? "neutral" : "disadvantage");
       await checkHit(f);
     }
@@ -260,7 +293,7 @@ const key = "hanmo-strategy-save-v2",
     let saved = await read(),
       f = saved.pendingBattle.combatFeedback.at(-1);
     assert.equal(f.after, 0);
-    assert.equal(f.casualties, 50);
+    assert.equal(f.casualties, 1);
     assert.match(await (await checkHit(f)).innerText(), /部隊潰滅/);
     assert.ok(
       (await page.locator(".tactical-unit-panel h3").innerText()).includes(
@@ -301,7 +334,7 @@ const key = "hanmo-strategy-save-v2",
     );
     const n = await read(),
       events = n.pendingBattle.combatFeedback.filter(
-        (f) => f.side === "defender",
+        (f) => f.phase === "defender",
       );
     assert.ok(events.length > 0);
     assert.equal(
@@ -319,7 +352,9 @@ const key = "hanmo-strategy-save-v2",
         u.troops - total,
       );
     }
-    const grouped = events.reduce((sum, f) => sum + f.casualties, 0);
+    const grouped = events
+      .filter((f) => f.targetId === "attacker-0")
+      .reduce((sum, f) => sum + f.casualties, 0);
     const batchFloat = tile(2, 2).locator(".combat-hit");
     assert.equal(
       await batchFloat.getAttribute("data-casualties"),
@@ -349,6 +384,14 @@ const key = "hanmo-strategy-save-v2",
     );
     await enter(old);
     assert.equal((await read()).pendingBattle.combatFeedback, undefined);
+    const old021 = JSON.parse(
+      fs.readFileSync(
+        path.join(__dirname, "../src/tests/fixtures/v0.2.1-battle-save.json"),
+        "utf8",
+      ),
+    );
+    await enter(old021);
+    assert.equal(await page.locator(".combat-hit").count(), 0);
     const v1 = JSON.parse(
       fs.readFileSync(
         path.join(__dirname, "../src/tests/fixtures/v0.1.1-save.json"),

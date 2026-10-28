@@ -1,8 +1,11 @@
 import type { Action, City, GameState } from "../engine/types";
 import { income } from "../engine/economy";
+import { EnemyApproaches } from "./CityOverview";
+import { cityReadiness } from "./cityOverview";
 import { ActionPanel } from "./ActionPanel";
 import { OfficerPanel } from "./OfficerPanel";
 export function CityPanel({
+  onSelect,
   onManual,
   feedback,
   state,
@@ -11,6 +14,7 @@ export function CityPanel({
   locked,
   onTarget,
 }: {
+  onSelect: (id: string) => void;
   onManual?: (a: Extract<Action, { targetId: string }>) => void;
   feedback?: string;
   state: GameState;
@@ -74,7 +78,14 @@ export function CityPanel({
         <br />
         軍糧支出：{i.upkeep.toLocaleString("zh-TW")} ／ 月
       </p>
-      <details open>
+      <p
+        className="city-readiness"
+        data-readiness={cityReadiness(state, city).reason}
+      >
+        {cityReadiness(state, city).reason} · 剩餘 {city.actions} 令 ·{" "}
+        {cityReadiness(state, city).ready} 將待命
+      </p>
+      <details className="city-officers">
         <summary>駐城武將 · {officers.length}人</summary>
         <OfficerPanel officers={officers} compact />
       </details>
@@ -96,6 +107,7 @@ export function CityPanel({
             : "敵境情報 · 請由相鄰己方城池出征。"}
         </p>
       )}
+      <EnemyApproaches state={state} city={city} onSelect={onSelect} />
     </aside>
   );
 }
