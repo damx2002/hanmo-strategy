@@ -1,6 +1,7 @@
 import type { Action, ActionResult, FactionId, GameState } from "./types";
 import { B, actionNames, clamp } from "./balance";
 import { checkResult, event } from "./game";
+import { domesticReason } from "./domestic";
 import { defenderFor, resolveCombat } from "./combat";
 export function dispatch(
   state: GameState,
@@ -40,19 +41,8 @@ export function dispatch(
     if (!Number.isSafeInteger(food) || food < 0 || food > c.food)
       return fail("兵糧不足或調動數量不合法。");
   } else {
-    const cost = B.costs[action.type];
-    if (cost === undefined) return fail("未知指令。");
-    if (c.gold < cost || (action.type === "recruit" && c.food < B.recruitFood))
-      return fail("金錢或兵糧不足。");
-    const stat =
-      action.type === "farm"
-        ? c.agriculture
-        : action.type === "trade"
-          ? c.commerce
-          : action.type === "train"
-            ? c.training
-            : 0;
-    if (stat >= B.maxStat) return fail("此項能力已達上限。");
+    const reason = domesticReason(c, action.type);
+    if (reason) return fail(reason);
   }
   const s = structuredClone(state),
     city = s.cities.find((x) => x.id === c.id)!,
@@ -154,6 +144,20 @@ export function dispatch(
       );
       city.security = clamp(city.security - B.recruitSecurity);
     }
+    if (action.type === "patrol")
+      city.security = clamp(
+        city.security +
+          B.patrolBase +
+          officer.politics * B.patrolPolitics +
+          officer.charm * B.patrolCharm,
+      );
+    if (action.type === "repair")
+      city.defense = clamp(
+        city.defense +
+          B.repairBase +
+          officer.leadership * B.repairLeadership +
+          officer.politics * B.repairPolitics,
+      );
     event(
       s,
       `${s.factions.find((f) => f.id === actor)!.name}軍於${city.name}執行${actionNames[action.type]}，由${officer.name}主持。`,

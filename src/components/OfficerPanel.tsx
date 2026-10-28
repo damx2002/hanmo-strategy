@@ -22,7 +22,7 @@ export function OfficerPanel({
         </thead>
         <tbody>
           {officers.map((o) => (
-            <tr key={o.id}>
+            <tr key={o.id} className={o.acted ? "officer-acted" : ""}>
               <td>
                 <span className="officer-seal">{o.name[0]}</span>
                 {o.name}
@@ -33,7 +33,7 @@ export function OfficerPanel({
               <td>{o.politics}</td>
               <td>{o.charm}</td>
               <td className={o.acted ? "muted" : "ready"}>
-                {o.acted ? "已用" : "待命"}
+                {o.acted ? "已行動" : "待命"}
               </td>
             </tr>
           ))}

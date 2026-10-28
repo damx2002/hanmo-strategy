@@ -7,6 +7,7 @@ import { loadGame, saveGame, SAVE_KEY } from "../engine/save";
 import { WorldMap } from "../components/WorldMap";
 import { CityPanel } from "../components/CityPanel";
 import { OfficerPanel } from "../components/OfficerPanel";
+import { actionFeedback } from "../components/actionSelection";
 import { BattleReport } from "../components/BattleReport";
 export default function App() {
   const [loaded] = useState(loadGame);
@@ -15,6 +16,10 @@ export default function App() {
   const [corrupt, setCorrupt] = useState(!!loaded.error);
   const [notice, setNotice] = useState(loaded.error),
     [saveError, setSaveError] = useState("");
+  const [actionNotice, setActionNotice] = useState<{
+    cityId: string;
+    text: string;
+  } | null>(null);
   const [selected, setSelected] = useState(""),
     [target, setTarget] = useState<string>(),
     [report, setReport] = useState<Battle | null>(null);
@@ -38,6 +43,7 @@ export default function App() {
   }, [game]);
   function enter(s: GameState) {
     setGame(s);
+    setActionNotice(null);
     setSelected(
       s.cities.find((c) => c.ownerId === s.playerId)?.id ?? s.cities[0].id,
     );
@@ -52,7 +58,9 @@ export default function App() {
       return;
     }
     setGame(result.state);
-    setNotice("軍令已執行，進度自動儲存。");
+    const feedback = actionFeedback(game, result.state, a);
+    setNotice(feedback);
+    setActionNotice({ cityId: a.cityId, text: feedback });
     if (a.type === "attack") setReport(result.state.battles[0]);
     setTarget(undefined);
   }
@@ -64,6 +72,7 @@ export default function App() {
       try {
         const next = endMonth(game);
         setGame(next);
+        setActionNotice(null);
         setSummary(next.events.filter((e) => !game.events.includes(e)));
         setTarget(undefined);
         setNotice("");
@@ -97,7 +106,7 @@ export default function App() {
             漢末群雄志<small>群雄對峙・建安十九年</small>
           </span>
         </a>
-        <span className="version">V0.1.0</span>
+        <span className="version">V0.1.1</span>
         {game && (
           <>
             <div className="date">
@@ -226,6 +235,9 @@ export default function App() {
                 state={game}
                 city={city}
                 onAction={act}
+                feedback={
+                  actionNotice?.cityId === city.id ? actionNotice.text : ""
+                }
                 locked={busy}
                 onTarget={setTarget}
               />
@@ -259,7 +271,7 @@ export default function App() {
         </main>
       )}
       <footer>
-        漢末群雄志 · 原創山河與人物徽章 ／ V0.1.0{" "}
+        漢末群雄志 · 原創山河與人物徽章 ／ V0.1.1{" "}
         <span>
           {game && !saveError ? "進度已自動儲存" : "本機存檔 · 無跨裝置同步"}
         </span>

@@ -64,7 +64,8 @@ export interface GameState {
   battles: Battle[];
   status: "playing" | "won" | "lost";
 }
-export type Domestic = "farm" | "trade" | "recruit" | "train";
+export type Domestic =
+  "farm" | "trade" | "recruit" | "train" | "patrol" | "repair";
 export type Action =
   | { type: Domestic; cityId: string; officerId: string }
   | {

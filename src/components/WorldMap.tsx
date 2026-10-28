@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { GameState } from "../engine/types";
 import { links } from "../data/scenario";
 // Voronoi half-plane clipping gives every city a territory that follows ownership.
@@ -41,6 +41,7 @@ export function WorldMap({
   target?: string;
   onSelect: (id: string) => void;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const source = state.cities.find((c) => c.id === selected)!;
   return (
@@ -57,7 +58,16 @@ export function WorldMap({
           >
             −
           </button>
-          <span>{Math.round(zoom * 100)}%</span>
+          <button
+            aria-label="重設地圖縮放與位置"
+            title="回到原始縮放與位置"
+            onClick={() => {
+              setZoom(1);
+              scrollRef.current?.scrollTo({ left: 0, top: 0 });
+            }}
+          >
+            {Math.round(zoom * 100)}%
+          </button>
           <button
             aria-label="放大地圖"
             disabled={zoom >= 2}
@@ -67,10 +77,15 @@ export function WorldMap({
           </button>
         </div>
       </div>
-      <div className="map-scroll">
+      <div
+        className="map-scroll"
+        ref={scrollRef}
+        tabIndex={0}
+        aria-label="地圖捲動區，可左右上下捲動"
+      >
         <svg
           viewBox="0 0 1000 690"
-          style={{ width: `${zoom * 100}%` }}
+          style={{ width: `max(${zoom * 100}%, ${zoom * 720}px)` }}
           role="group"
           aria-label="十二城戰略地圖，可使用 Tab 選擇城池"
         >
@@ -227,7 +242,7 @@ export function WorldMap({
             {f.name} · {state.cities.filter((c) => c.ownerId === f.id).length}城
           </span>
         ))}
-        <small>金色外圈：已選取　虛線：可攻擊</small>
+        <small>金色外圈：已選取　虛線：可攻擊 · 可左右捲動，百分比可復位</small>
       </div>
     </section>
   );

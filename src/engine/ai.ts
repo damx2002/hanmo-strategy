@@ -9,6 +9,7 @@ export function runAI(state: GameState, actor: FactionId): GameState {
   for (const id of state.cities
     .filter((c) => c.ownerId === actor)
     .map((c) => c.id)) {
+    let governed = false;
     for (let step = 0; step < B.actions; step++) {
       const c = s.cities.find((c) => c.id === id)!;
       if (c.ownerId !== actor || c.actions <= 0 || s.status !== "playing")
@@ -76,20 +77,39 @@ export function runAI(state: GameState, actor: FactionId): GameState {
                 ? "recruit"
                 : c.training < B.aiTraining
                   ? "train"
-                  : c.agriculture < 85
-                    ? "farm"
-                    : c.commerce < 100
-                      ? "trade"
-                      : c.troops < B.aiTroops * 2
-                        ? "recruit"
-                        : undefined;
+                  : !governed && c.security < B.aiSecurity
+                    ? "patrol"
+                    : !governed && enemies.length > 0 && c.defense < B.aiDefense
+                      ? "repair"
+                      : c.agriculture < 85
+                        ? "farm"
+                        : c.commerce < 100
+                          ? "trade"
+                          : c.troops < B.aiTroops * 2
+                            ? "recruit"
+                            : undefined;
         if (!type) break;
         action = { type, cityId: id, officerId: o.id };
+      }
+      // Governance must leave a reserve and never block a cheaper useful action.
+      if (
+        (action.type === "patrol" || action.type === "repair") &&
+        c.gold < B.aiGold + B.costs[action.type]
+      ) {
+        const fallback =
+          c.commerce < B.maxStat
+            ? "trade"
+            : c.agriculture < B.maxStat
+              ? "farm"
+              : undefined;
+        if (!fallback) break;
+        action = { type: fallback, cityId: id, officerId: o.id };
       }
       const result = dispatch(s, action, actor);
       if (!result.ok) break;
       s = result.state;
       if (action.type === "attack") attacked = true;
+      if (action.type === "patrol" || action.type === "repair") governed = true;
     }
   }
   return s;

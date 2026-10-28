@@ -1003,3 +1003,46 @@ footer {
     flex-shrink: 0;
   }
 }
+/* V0.1.1: eight commands, quiet acted states, and effective map zoom. */
+.command-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.command-grid button {
+  padding-inline: 5px;
+  min-height: 44px;
+}
+.command-grid button:disabled {
+  opacity: 0.5;
+  border-style: dashed;
+}
+.officer-acted {
+  color: #a0a994;
+  background: #10221b66;
+}
+.officer-acted .officer-seal {
+  opacity: 0.55;
+}
+.zoom button {
+  min-width: 44px;
+  min-height: 44px;
+  width: auto;
+  padding-inline: 6px;
+}
+.map-scroll {
+  scrollbar-color: #9d9567 #16271e;
+}
+@media (max-width: 760px) {
+  .map-heading {
+    letter-spacing: 1px;
+  }
+  .zoom {
+    gap: 4px;
+  }
+}
+.action-feedback {
+  padding: 8px 10px;
+  border-left: 2px solid #b7a46b;
+  background: #344631;
+  color: #e3d6a6;
+  font-size: 13px;
+}

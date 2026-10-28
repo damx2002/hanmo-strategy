@@ -1,15 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Action, City, Domestic, GameState } from "../engine/types";
 import { B, actionNames } from "../engine/balance";
 import { defenderFor, estimate } from "../engine/combat";
+import { domesticReason } from "../engine/domestic";
+import { nextAvailableOfficer } from "./actionSelection";
 const n = (v: number) => v.toLocaleString("zh-TW");
 export function ActionPanel({
+  feedback,
   state,
   city,
   onAction,
   locked,
   onTarget,
 }: {
+  feedback?: string;
   state: GameState;
   city: City;
   onAction: (a: Action) => void;
@@ -20,9 +24,14 @@ export function ActionPanel({
   const officers = state.officers.filter(
     (o) => o.cityId === city.id && o.factionId === state.playerId,
   );
-  const [officerId, setOfficer] = useState(
+  const [preferredOfficerId, setOfficer] = useState(
     officers.find((o) => !o.acted)?.id ?? "",
   );
+  const officerId = nextAvailableOfficer(officers, preferredOfficerId);
+  // Sync only when the effective selection changes, never on a new array reference.
+  useEffect(() => {
+    if (preferredOfficerId !== officerId) setOfficer(officerId);
+  }, [officerId, preferredOfficerId]);
   const [targetId, setTarget] = useState("");
   const [troops, setTroops] = useState(Math.max(0, city.troops - B.guard));
   const [food, setFood] = useState(0);
@@ -41,9 +50,11 @@ export function ActionPanel({
   const reason = locked
     ? "月份結算中"
     : city.actions === 0
-      ? "本城本月指令已用盡"
+      ? "本城本月指令已用盡，請結束本月"
       : !officer
-        ? "請選擇武將"
+        ? officers.length
+          ? "本城武將已全部行動"
+          : "本城沒有可用武將，請由友城調入"
         : officer.acted
           ? "此武將本月已行動"
           : military && !target
@@ -60,15 +71,31 @@ export function ActionPanel({
                 : type === "attack" &&
                     city.food < Math.ceil(troops * B.foodPerTroop)
                   ? "出征兵糧不足"
-                  : !military &&
-                      (city.gold < B.costs[type as Domestic] ||
-                        (type === "recruit" && city.food < B.recruitFood))
-                    ? "資源不足"
-                    : (type === "farm" && city.agriculture === 100) ||
-                        (type === "trade" && city.commerce === 100) ||
-                        (type === "train" && city.training === 100)
-                      ? "此項能力已達上限"
-                      : "";
+                  : !military
+                    ? domesticReason(city, type as Domestic)
+                    : "";
+  function commandReason(command: keyof typeof actionNames) {
+    if (locked) return "月份結算中";
+    if (!city.actions) return "本城本月指令已用盡";
+    if (!officer)
+      return officers.length ? "本城武將已全部行動" : "本城沒有可用武將";
+    if (command === "attack" || command === "transfer") {
+      if (
+        !state.cities.some(
+          (c) =>
+            city.neighbors.includes(c.id) &&
+            (command === "attack"
+              ? c.ownerId !== city.ownerId
+              : c.ownerId === city.ownerId),
+        )
+      )
+        return "沒有合法的相鄰目標";
+      if (command === "attack" && city.troops <= B.guard)
+        return "兵力不足，必須留下基本守軍";
+      return "";
+    }
+    return domesticReason(city, command);
+  }
   const action = (): Action =>
     military
       ? {
@@ -95,11 +122,19 @@ export function ActionPanel({
       <h3>
         施政軍令 <span>本月剩餘 {city.actions}／3</span>
       </h3>
+      {feedback && (
+        <p className="action-feedback" role="status">
+          {feedback}
+        </p>
+      )}
       <div className="command-grid">
         {(Object.keys(actionNames) as (keyof typeof actionNames)[]).map((t) => (
           <button
             className={type === t ? "chosen" : ""}
             key={t}
+            disabled={!!commandReason(t)}
+            title={commandReason(t) || actionNames[t]}
+            aria-pressed={type === t}
             onClick={() => {
               setType(t);
               setTarget("");
@@ -113,7 +148,11 @@ export function ActionPanel({
       <label>
         指揮武將
         <select value={officerId} onChange={(e) => setOfficer(e.target.value)}>
-          <option value="">選擇本城武將</option>
+          <option value="">
+            {officers.length && !officerId
+              ? "本城武將已全部行動"
+              : "選擇本城武將"}
+          </option>
           {officers.map((o) => (
             <option key={o.id} value={o.id} disabled={o.acted}>
               {o.name}
@@ -193,7 +232,11 @@ export function ActionPanel({
             ? `、兵糧 ${B.recruitFood}；魅力提升徵兵效率，治安 −${B.recruitSecurity}`
             : type === "train"
               ? "；統率提升訓練效果"
-              : "；政治及智力提升發展效果"}
+              : type === "patrol"
+                ? "；政治及魅力提升巡察效果，治安最高 100"
+                : type === "repair"
+                  ? "；統率及政治提升修築效果，城防直接強化防守戰力"
+                  : "；政治及智力提升發展效果"}
           。
         </p>
       )}

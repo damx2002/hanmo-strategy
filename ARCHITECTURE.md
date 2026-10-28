@@ -1,6 +1,6 @@
 # 架構與驗證
 
-React 19、strict TypeScript、Vite 7、原生 CSS、SVG、Vitest；npm lockfile 固定相依套件。無網路執行時相依，無後端。
+React 19、strict TypeScript、Vite 7、原生 CSS、SVG、Vitest 4.1.12；npm lockfile 固定相依套件。無網路執行時相依，無後端。
 
 ## 模組
 
@@ -46,3 +46,13 @@ PLAYWRIGHT_MODULE=/tmp/hanmo-browser-tools/node_modules/playwright CHROMIUM_PATH
 ```
 
 若 Chromium 路徑不同，請設定 `CHROMIUM_PATH`。`GAME_URL` 可改為本機 production preview 的完整子路徑。腳本包含地圖選城、開墾、讀檔、30 將、調兵守恆、趙雲出征與實際兵損、戰後復原、損毀存檔刪除後開局、結束月份雙擊互斥、412×915／915×412／360×800 無水平溢出及彈窗邊界。截圖寫入 `/tmp/hanmo-*.png`。
+
+## V0.1.1 增量模組
+
+- `engine/domestic.ts`：共用內政欄位、成本與上限檢查，供 dispatch 及按鈕狀態共用。
+- `components/actionSelection.ts`：純函式有效武將選取與成功前後數值回饋；指令效果仍完全由引擎計算。
+- `tests/governance.test.ts`：巡察、修築、AI 優先序與成本、長期模擬、武將選取、舊檔完整性。
+- `tests/fixtures/v0.1.0-save.json`：開發改動前由 V0.1.0 原始引擎生成的固定存檔，含戰報、AI 與月結；不以新引擎動態生成假裝舊檔。
+- `scripts/browser-v011.cjs`：在相同 Playwright／Chromium 環境執行 `node scripts/browser-v011.cjs`，預設使用 production preview 的 4173 子路徑，可用 GAME_URL 覆寫。實測舊檔逐欄保持、治理效果、自動與手選武將、耗盡／離城、手機指令至少 44px、真實縮放捲動及復位。
+
+保留原本 `engine.test.ts`、`campaign.test.ts` 及 `browser-smoke.cjs`，不弱化既有斷言。GameState 與存檔模組不需要修改或遷移。
