@@ -55,4 +55,35 @@ PLAYWRIGHT_MODULE=/tmp/hanmo-browser-tools/node_modules/playwright CHROMIUM_PATH
 - `tests/fixtures/v0.1.0-save.json`：開發改動前由 V0.1.0 原始引擎生成的固定存檔，含戰報、AI 與月結；不以新引擎動態生成假裝舊檔。
 - `scripts/browser-v011.cjs`：在相同 Playwright／Chromium 環境執行 `node scripts/browser-v011.cjs`，預設使用 production preview 的 4173 子路徑，可用 GAME_URL 覆寫。實測舊檔逐欄保持、治理效果、自動與手選武將、耗盡／離城、手機指令至少 44px、真實縮放捲動及復位。
 
-保留原本 `engine.test.ts`、`campaign.test.ts` 及 `browser-smoke.cjs`，不弱化既有斷言。GameState 與存檔模組不需要修改或遷移。
+保留原本 `engine.test.ts`、`campaign.test.ts` 及 `browser-smoke.cjs`，不弱化既有斷言。上述僅為 V0.1.1 的相容策略；V0.2.0 改為下列 V2 遷移。
+
+## V0.2.0 戰術引擎與生命週期
+
+- `expedition.ts`：兩種模式與敵國出征共同的 validate／reserve／settle；委任公式不變，防止不同路徑重複扣資源。
+- `tactical/types.ts`、`createBattle.ts`：pendingBattle、地形、兵種與守恆分隊。
+- `movement.ts`：地形成本的 Dijkstra；`damage.ts`：射程、預估傷害與火計條件。
+- `actions.ts`：純函式單步 reducer、階段、城門、駐守、回合上限與撤退。
+- `ai.ts`：有固定上限的評分行動，所有修改透過 reducer。
+- `resolve.ts`：GameState 級單步、敵軍階段與帶 battle ID 的一次性戰果套用。
+- `validate.ts`：V2 pending 的結構及跨欄位驗證，重建模板核對地形、初始分隊與預留資訊。
+- `components/tactical/`：TacticalBattle 管理 UI 選取／模式及敵軍計時；TacticalMap 只畫格子；UnitPanel 只展示指令與禁用原因。規則不依賴 React／時鐘，僅 UI 有效果與雙擊防護。
+
+主流程：軍議（零副作用）→ 共用驗證 → reserve → 自動結果或建立 pending → 儲存每個戰術步驟 → finished pending → settle → clear pending → 自動存檔／戰報。敵軍階段本身可存檔，重開後只恢復那一階段，不再次 reserve。
+
+### 測試變更說明
+
+保留原有48項測試。錯版拒絕案例從 version:2 改測未知 version:999；舊檔相容斷言改為完整世界相等、只加 version:2/pendingBattle:null。將原戰役的同一策略抽到 `tests/helpers/playCampaign.ts`，原委任統一測試不變，再注入親征結算跑交替模式整場戰役；沒有放寬勝利條件或修改戰略公式。
+
+新增 `tactical.test.ts`（分隊、尋路、兵種、傷害／火計成功失敗、AI、門與駐守、撤退、一次結算、V1/V2 及損壞驗證）與 `tacticalCampaign.test.ts`（親征／委任混合，每階段序列化後仍統一）。
+
+### 真實瀏覽器驗收
+
+啟動 `npm run preview -- --port 4173`，沿用上方 Playwright／Chromium 設定後執行：
+
+```sh
+GAME_URL=http://127.0.0.1:4173/hanmo-strategy/ PLAYWRIGHT_MODULE=/tmp/hanmo-browser-tools/node_modules/playwright node scripts/browser-v020.cjs
+```
+
+腳本以 UI 合法調兵集結，不灌入戰果；取消軍議、親征、點部隊移動、真實攻擊與敵軍階段、勝利易主、戰後重載確認一次結算。使用 Chromium persistent profile 實際關閉／重啟後驗證完整戰中狀態。測試 412×915、915×412、360×800 的無水平溢出、至少44px格與指令、縮放；再驗證 V1 原檔備份及損毀 V2 明確復原。讀取純函式只用於選合法 UI 目標，所有實際戰果透過按鈕和格子操作。
+
+既有兩套瀏覽器回歸保留，調整新 save key／遷移預期及「委任作戰」按鈕名稱。

@@ -3,12 +3,37 @@ import { B, actionNames, clamp } from "./balance";
 import { checkResult, event } from "./game";
 import { domesticReason } from "./domestic";
 import { defenderFor, resolveCombat } from "./combat";
+import {
+  validateExpedition,
+  reserveExpedition,
+  settleExpedition,
+} from "./expedition";
 export function dispatch(
   state: GameState,
   action: Action,
   actor: FactionId = state.playerId,
 ): ActionResult {
   const fail = (error: string): ActionResult => ({ ok: false, state, error });
+  if (state.pendingBattle) return fail("戰鬥尚未結束，不能下達其他軍令。");
+  if (action.type === "attack") {
+    const error = validateExpedition(state, action, actor);
+    if (error) return fail(error);
+    const source = state.cities.find((c) => c.id === action.cityId)!,
+      target = state.cities.find((c) => c.id === action.targetId)!,
+      officer = state.officers.find((o) => o.id === action.officerId)!;
+    const result = resolveCombat(
+      source,
+      target,
+      officer,
+      defenderFor(state.officers, target),
+      action.troops,
+      state.seed,
+    );
+    return {
+      ok: true,
+      state: settleExpedition(reserveExpedition(state, action), action, result),
+    };
+  }
   if (state.status !== "playing") return fail("遊戲已結束，請開始新遊戲。");
   const c = state.cities.find((c) => c.id === action.cityId),
     o = state.officers.find((o) => o.id === action.officerId);
@@ -17,27 +42,17 @@ export function dispatch(
     return fail("請選擇本城武將。");
   if (c.actions <= 0) return fail("本城本月指令已用盡。");
   if (o.acted) return fail("這位武將本月已行動。");
-  if (action.type === "attack" || action.type === "transfer") {
+  if (action.type === "transfer") {
     const t = state.cities.find((t) => t.id === action.targetId);
     if (!t || !c.neighbors.includes(t.id)) return fail("目標必須是相鄰城池。");
-    if ((action.type === "attack") === (t.ownerId === actor))
-      return fail(
-        action.type === "attack"
-          ? "不能進攻己方城池。"
-          : "只能調動到己方城池。",
-      );
+    if (t.ownerId !== actor) return fail("只能調動到己方城池。");
     if (
       !Number.isSafeInteger(action.troops) ||
       action.troops < 0 ||
       action.troops > c.troops - B.guard
     )
       return fail(`出兵需留下 ${B.guard} 名守軍，且兵數須為整數。`);
-    if (action.type === "attack" && action.troops === 0)
-      return fail("出征至少需要一名士兵。");
-    const food =
-      action.type === "attack"
-        ? Math.ceil(action.troops * B.foodPerTroop)
-        : (action.food ?? 0);
+    const food = action.food ?? 0;
     if (!Number.isSafeInteger(food) || food < 0 || food > c.food)
       return fail("兵糧不足或調動數量不合法。");
   } else {
@@ -49,9 +64,9 @@ export function dispatch(
     officer = s.officers.find((x) => x.id === o.id)!;
   city.actions--;
   officer.acted = true;
-  if (action.type === "attack" || action.type === "transfer") {
+  if (action.type === "transfer") {
     const target = s.cities.find((x) => x.id === action.targetId)!;
-    if (action.type === "transfer") {
+    {
       const food = action.food ?? 0;
       if (
         target.food + food > B.maxResource ||
@@ -66,58 +81,6 @@ export function dispatch(
       event(
         s,
         `${s.factions.find((f) => f.id === actor)!.name}軍：${officer.name}自${city.name}調往${target.name}，兵 ${action.troops.toLocaleString("zh-TW")}、糧 ${food.toLocaleString("zh-TW")}。`,
-      );
-    } else {
-      const previousOwner = target.ownerId;
-      const battle = resolveCombat(
-        city,
-        target,
-        officer,
-        defenderFor(s.officers, target),
-        action.troops,
-        s.seed,
-      );
-      s.seed = battle.seed;
-      city.food -= Math.ceil(action.troops * B.foodPerTroop);
-      city.troops -= battle.won ? action.troops : battle.attackLoss;
-      target.troops -= battle.defenseLoss;
-      if (battle.won) {
-        target.ownerId = actor;
-        target.troops = battle.survivors;
-        target.gold = clamp(target.gold * B.captureGold, B.maxResource);
-        target.food = clamp(target.food * B.captureFood, B.maxResource);
-        target.security = clamp(target.security - B.captureSecurityLoss);
-        target.defense = clamp(target.defense - B.captureDefenseLoss);
-        target.actions = 0;
-        const retreat = s.cities
-          .filter((x) => x.ownerId === previousOwner)
-          .sort(
-            (a, b) =>
-              Number(target.neighbors.includes(b.id)) -
-              Number(target.neighbors.includes(a.id)),
-          )[0];
-        s.officers
-          .filter((x) => x.cityId === target.id)
-          .forEach((x) => {
-            x.cityId = retreat?.id ?? null;
-            if (!retreat) x.factionId = null;
-          });
-        officer.cityId = target.id;
-      }
-      s.battles.unshift({
-        id: s.turn * 1000 + s.events.length,
-        from: city.name,
-        to: target.name,
-        attacker: actor,
-        defender: previousOwner,
-        commander: officer.name,
-        sent: action.troops,
-        ...battle,
-      });
-      s.battles = s.battles.slice(0, B.battleLimit);
-      event(
-        s,
-        `${officer.name}率${action.troops.toLocaleString("zh-TW")}兵自${city.name}進攻${target.name}：${battle.won ? "攻占成功" : "攻城失利"}。我軍損失${battle.attackLoss.toLocaleString("zh-TW")}，守軍損失${battle.defenseLoss.toLocaleString("zh-TW")}。`,
       );
     }
   } else {

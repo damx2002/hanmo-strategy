@@ -1,3 +1,4 @@
+import type { TacticalState } from "./tactical/types";
 export type FactionId = "cao" | "liu" | "sun";
 export interface Faction {
   id: FactionId;
@@ -36,6 +37,10 @@ export interface City {
   actions: number;
 }
 export interface Battle {
+  defenseRouted?: number;
+  mode?: "tactical" | "automatic";
+  tacticalEvents?: string[];
+  reason?: string;
   id: number;
   from: string;
   to: string;
@@ -51,7 +56,8 @@ export interface Battle {
   won: boolean;
 }
 export interface GameState {
-  version: 1;
+  version: 1 | 2;
+  pendingBattle?: TacticalState | null;
   year: number;
   month: number;
   turn: number;

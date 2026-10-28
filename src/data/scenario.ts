@@ -160,7 +160,8 @@ export function createOfficers(): Officer[] {
 }
 export function newGame(playerId: FactionId, seed = 214019): GameState {
   return {
-    version: 1,
+    version: 2,
+    pendingBattle: null,
     year: 214,
     month: 1,
     turn: 0,

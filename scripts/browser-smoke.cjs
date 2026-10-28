@@ -18,7 +18,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
   await page.getByRole("button", { name: /成都，/ }).click();
   await page.getByRole("button", { name: "開墾 · 執行" }).click();
   let save = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("hanmo-strategy-save-v1")),
+    JSON.parse(localStorage.getItem("hanmo-strategy-save-v2")),
   );
   if (save.cities.find((c) => c.id === "chengdu").actions !== 2)
     throw Error("內政未執行");
@@ -31,7 +31,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
   await page.getByRole("button", { name: "結束本月 →" }).click();
   await page.getByRole("button", { name: "開啟新月" }).click();
   save = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("hanmo-strategy-save-v1")),
+    JSON.parse(localStorage.getItem("hanmo-strategy-save-v2")),
   );
   if (save.month !== 2) throw Error("月結失敗");
   await page.screenshot({ path: "/tmp/hanmo-desktop.png", fullPage: true });
@@ -59,11 +59,11 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
   await page.getByLabel("派遣兵力", { exact: true }).fill("2000");
   await page.getByLabel("隨軍兵糧").fill("1000");
   const beforeTransfer = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("hanmo-strategy-save-v1")),
+    JSON.parse(localStorage.getItem("hanmo-strategy-save-v2")),
   );
   await page.getByRole("button", { name: "調動 · 執行" }).click();
   const transferred = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("hanmo-strategy-save-v1")),
+    JSON.parse(localStorage.getItem("hanmo-strategy-save-v2")),
   );
   if (transferred.officers.find((o) => o.id === "liu-3").cityId !== "xiangyang")
     throw Error("趙雲調動失敗");
@@ -81,12 +81,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
   await page.getByLabel("攻城目標").selectOption("wan");
   await page.getByLabel("派遣兵力", { exact: true }).fill("6000");
   const beforeAttack = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("hanmo-strategy-save-v1")),
+    JSON.parse(localStorage.getItem("hanmo-strategy-save-v2")),
   );
   await page.getByRole("button", { name: "出征 · 檢視軍議" }).click();
-  await page.getByRole("button", { name: "鳴鼓出征" }).click();
+  await page.getByRole("button", { name: "委任作戰" }).click();
   const afterAttack = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("hanmo-strategy-save-v1")),
+    JSON.parse(localStorage.getItem("hanmo-strategy-save-v2")),
   );
   const report = afterAttack.battles[0];
   if (!report || report.commander !== "趙雲") throw Error("趙雲戰報未建立");
@@ -103,12 +103,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
   await page.reload();
   await page.getByRole("button", { name: /繼續遊戲/ }).click();
   const restored = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("hanmo-strategy-save-v1")),
+    JSON.parse(localStorage.getItem("hanmo-strategy-save-v2")),
   );
   if (restored.seed !== afterAttack.seed) throw Error("戰後存檔錯誤");
   // Recovery from a corrupt save must allow a real new game after confirmation.
   await page.evaluate(() =>
-    localStorage.setItem("hanmo-strategy-save-v1", "{broken"),
+    localStorage.setItem("hanmo-strategy-save-v2", "{broken"),
   );
   await page.reload();
   await page.getByRole("button", { name: /劉備.*起兵/ }).click();
@@ -120,7 +120,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
   await page.getByRole("button", { name: "結束本月 →" }).dblclick();
   await page.getByRole("button", { name: "開啟新月" }).click();
   const last = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("hanmo-strategy-save-v1")),
+    JSON.parse(localStorage.getItem("hanmo-strategy-save-v2")),
   );
   if (last.turn !== 1) throw Error("月結重複");
   if (errors.length) throw Error(errors.join("\n"));

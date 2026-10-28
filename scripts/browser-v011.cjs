@@ -10,7 +10,8 @@ const legacy = JSON.parse(
     "utf8",
   ),
 );
-const key = "hanmo-strategy-save-v1";
+const key = "hanmo-strategy-save-v2";
+const legacyKey = "hanmo-strategy-save-v1";
 (async () => {
   const browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
@@ -29,7 +30,9 @@ const key = "hanmo-strategy-save-v1";
       page.evaluate((key) => JSON.parse(localStorage.getItem(key)), key);
     const enter = async (state) => {
       await page.evaluate(
-        ({ key, state }) => localStorage.setItem(key, JSON.stringify(state)),
+        ({ key, state }) =>
+          localStorage.removeItem(key) ||
+          localStorage.setItem("hanmo-strategy-save-v1", JSON.stringify(state)),
         { key, state },
       );
       await page.reload();
@@ -38,7 +41,7 @@ const key = "hanmo-strategy-save-v1";
     await enter(legacy);
     assert.deepEqual(
       await read(),
-      legacy,
+      { ...legacy, version: 2, pendingBattle: null },
       "舊檔進入遊戲後必須完整保留，不能重置",
     );
     await page.getByRole("button", { name: /成都，/ }).click();

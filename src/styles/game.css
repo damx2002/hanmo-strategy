@@ -1046,3 +1046,302 @@ footer {
   color: #e3d6a6;
   font-size: 13px;
 }
+/* V0.2.0 tactical board: native scrolling preserves 56px touch tiles in portrait. */
+.tactical-screen {
+  max-width: 1400px;
+  margin: auto;
+  padding: 20px 3vw;
+}
+.battle-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.battle-heading h1 {
+  font-size: 30px;
+  margin: 8px 0;
+  letter-spacing: 4px;
+}
+.battle-heading small {
+  color: var(--gold);
+}
+.battle-heading p {
+  font-size: 14px;
+}
+.animation-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  min-height: 44px;
+}
+.animation-toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--gold);
+}
+.tactical-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+.tactical-map-frame {
+  border: 1px solid #817249;
+  background: #1b3025;
+  min-width: 0;
+}
+.tactical-map-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  gap: 8px;
+  color: #d5c18f;
+}
+.tactical-scroll {
+  overflow: auto;
+  max-height: 65dvh;
+  touch-action: pan-x pan-y;
+  scrollbar-color: #ac9a64 #17291f;
+}
+.battle-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  padding: 6px;
+  gap: 3px;
+}
+.battle-cell {
+  position: relative;
+  border-radius: 0;
+  aspect-ratio: 1;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #607050;
+  box-shadow: inset 0 0 8px #0002;
+  line-height: 1.2;
+}
+.battle-cell strong {
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 500;
+  position: relative;
+  z-index: 1;
+}
+.battle-cell:hover:not(:disabled) {
+  border-color: #e5ce8b;
+}
+.terrain-plain {
+  background: #3a5035;
+}
+.terrain-forest {
+  background: #253f2c;
+}
+.terrain-hill {
+  background: #655e3f;
+}
+.terrain-city {
+  background: #5a5744;
+}
+.terrain-gate {
+  background: #65503a;
+}
+.tile-terrain {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  font-size: 9px;
+  color: #d7d2b299;
+}
+.terrain-art {
+  font-size: 25px;
+  opacity: 0.28;
+  color: #cfbf87;
+}
+.unit-banner {
+  font-size: 20px;
+  position: relative;
+  z-index: 1;
+}
+.side-attacker {
+  color: #c4e2a5;
+  border-bottom: 4px solid #a4bd7c;
+}
+.side-defender {
+  color: #f5b1a0;
+  border-bottom: 4px solid #bf806e;
+}
+.unit-selected {
+  outline: 3px solid #f1c774;
+  outline-offset: -3px;
+  box-shadow: inset 0 0 0 4px #233626;
+}
+.unit-acted {
+  filter: brightness(0.65);
+}
+.cell-move {
+  background: #577147;
+  outline: 2px solid #b2cb8d;
+  outline-offset: -2px;
+}
+.cell-target {
+  outline: 3px solid #e4a08c;
+  outline-offset: -3px;
+}
+.gate-art {
+  font-size: 24px;
+  color: #e0ba83;
+}
+.tactical-unit-panel {
+  border: 1px solid #68704e;
+  padding: 16px;
+  background: #203529;
+}
+.unit-numbers {
+  font: 14px/1.8 monospace;
+}
+.tactical-commands {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.tactical-commands button {
+  padding: 8px 5px;
+}
+.tactical-commands .chosen {
+  background: #78643d;
+  border-color: #d4b574;
+}
+.battle-phase-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.battle-phase-buttons .primary {
+  flex: 1;
+}
+.tactical-outcome {
+  border: 1px solid #bda669;
+  padding: 18px;
+  margin-top: 14px;
+  background: #34442b;
+}
+.tactical-outcome h2 {
+  color: #e5d197;
+}
+.tactical-feedback {
+  border-left: 3px solid #ae975c;
+  padding: 12px;
+  background: #30432d;
+  margin-top: 16px;
+  font-size: 14px;
+}
+.with-effects {
+  animation: tactical-flash 0.45s ease-out;
+}
+.tactical-events {
+  padding: 14px;
+}
+.tactical-events > div {
+  max-height: 160px;
+  overflow: auto;
+  font-size: 12px;
+}
+.map-key {
+  padding: 0 12px;
+}
+.recovery-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.recovery-options button {
+  font-size: 13px;
+}
+@keyframes tactical-flash {
+  from {
+    background: #80633a;
+    transform: translateY(-2px);
+  }
+  to {
+    background: #30432d;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 760px) {
+  .tactical-screen {
+    padding: 14px 12px;
+  }
+  .tactical-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .battle-heading {
+    align-items: start;
+  }
+  .battle-heading h1 {
+    font-size: 23px;
+    letter-spacing: 2px;
+  }
+  .battle-heading p {
+    font-size: 12px;
+  }
+  .tactical-map-heading {
+    font-size: 13px;
+    padding: 6px;
+  }
+  .battle-grid {
+    gap: 2px;
+    padding: 4px;
+  }
+  .tactical-commands {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .tactical-scroll {
+    max-height: 54dvh;
+  }
+  .tactical-unit-panel {
+    padding: 12px;
+  }
+  .tactical-unit-panel h3 {
+    margin: 4px 0;
+  }
+  .battle-phase-buttons button {
+    min-height: 48px;
+  }
+  .animation-toggle {
+    font-size: 11px;
+  }
+  .unit-numbers {
+    font-size: 12px;
+  }
+  .tactical-feedback {
+    font-size: 12px;
+  }
+  .game-header:has(+ .tactical-screen) {
+    position: relative;
+  }
+}
+.cell-keep {
+  border: 2px solid #b9a262;
+}
+.cell-keep .terrain-art {
+  color: #e3c578;
+  opacity: 0.8;
+}
+.effect-fire {
+  border-color: #cf8d64;
+}
+@media (max-width: 760px) {
+  .game-header:has(~ .tactical-screen) {
+    position: relative;
+  }
+}

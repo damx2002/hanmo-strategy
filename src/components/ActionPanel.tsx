@@ -6,6 +6,7 @@ import { domesticReason } from "../engine/domestic";
 import { nextAvailableOfficer } from "./actionSelection";
 const n = (v: number) => v.toLocaleString("zh-TW");
 export function ActionPanel({
+  onManual,
   feedback,
   state,
   city,
@@ -13,6 +14,7 @@ export function ActionPanel({
   locked,
   onTarget,
 }: {
+  onManual?: (a: Extract<Action, { targetId: string }>) => void;
   feedback?: string;
   state: GameState;
   city: City;
@@ -291,10 +293,20 @@ export function ActionPanel({
                 disabled={!!reason}
                 onClick={() => {
                   setConfirm(false);
+                  onManual?.(action() as Extract<Action, { targetId: string }>);
+                }}
+              >
+                親自指揮
+              </button>
+              <button
+                className="primary"
+                disabled={!!reason}
+                onClick={() => {
+                  setConfirm(false);
                   onAction(action());
                 }}
               >
-                鳴鼓出征
+                委任作戰
               </button>
             </div>
           </section>

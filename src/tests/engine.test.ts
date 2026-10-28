@@ -360,7 +360,7 @@ describe("完整存檔", () => {
     expect(() => deserialize("{")).toThrow();
     const s = newGame("liu");
     const bads: unknown[] = [
-      { ...s, version: 2 },
+      { ...s, version: 999 },
       { ...s, cities: [] },
       { ...s, seed: NaN },
       null,

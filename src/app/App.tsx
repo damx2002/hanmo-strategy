@@ -1,14 +1,28 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { factions, newGame } from "../data/scenario";
 import type { Action, Battle, FactionId, GameState } from "../engine/types";
 import { dispatch } from "../engine/actions";
 import { endMonth } from "../engine/turn";
-import { loadGame, saveGame, SAVE_KEY } from "../engine/save";
+import {
+  loadGame,
+  saveGame,
+  SAVE_KEY,
+  restoreLegacy,
+  exportSave,
+} from "../engine/save";
 import { WorldMap } from "../components/WorldMap";
 import { CityPanel } from "../components/CityPanel";
 import { OfficerPanel } from "../components/OfficerPanel";
 import { actionFeedback } from "../components/actionSelection";
 import { BattleReport } from "../components/BattleReport";
+import { beginTactical } from "../engine/tactical/createBattle";
+import {
+  applyTactical,
+  enemyPhase,
+  completeTactical,
+} from "../engine/tactical/resolve";
+import type { TacticalAction } from "../engine/tactical/types";
+import { TacticalBattle } from "../components/tactical/TacticalBattle";
 export default function App() {
   const [loaded] = useState(loadGame);
   const [game, setGame] = useState<GameState | null>(null);
@@ -64,8 +78,75 @@ export default function App() {
     if (a.type === "attack") setReport(result.state.battles[0]);
     setTarget(undefined);
   }
+  const advanceEnemy = useCallback(
+    () => setGame((s) => (s ? enemyPhase(s) : s)),
+    [],
+  );
+  function manual(a: Extract<Action, { targetId: string }>) {
+    if (!game || turnLock.current) return;
+    const r = beginTactical(game, a);
+    if (!r.ok) {
+      setNotice(r.error);
+      return;
+    }
+    setNotice("");
+    setActionNotice(null);
+    setGame(r.state);
+  }
+  function command(a: TacticalAction) {
+    if (!game) return;
+    const r = applyTactical(game, a);
+    if (r.ok) {
+      setGame(r.state);
+      setNotice("");
+    } else setNotice(r.error);
+  }
+  function finishBattle() {
+    if (!game?.pendingBattle) return;
+    const r = completeTactical(game, game.pendingBattle.id);
+    if (!r.ok) {
+      setNotice(r.error);
+      return;
+    }
+    setGame(r.state);
+    setReport(r.state.battles[0]);
+    setNotice("戰果已結算並自動儲存。");
+  }
+  function downloadBackup() {
+    try {
+      const url = URL.createObjectURL(
+        new Blob([exportSave()], { type: "application/json" }),
+      );
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "hanmo-save-backup.json";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setNotice("無法匯出備份，請檢查瀏覽器權限。");
+    }
+  }
+  function recoverLegacy() {
+    if (
+      !window.confirm(
+        "確認回到舊 V1 備份的進度？現有 V2 會另外保留為復原備份，不會靜默覆寫。",
+      )
+    )
+      return;
+    const r = restoreLegacy();
+    if (r.state) {
+      setCorrupt(false);
+      enter(r.state);
+    } else setNotice(r.error);
+  }
   function nextMonth() {
-    if (!game || turnLock.current || game.status !== "playing") return;
+    if (
+      !game ||
+      turnLock.current ||
+      game.pendingBattle ||
+      game.status !== "playing"
+    )
+      return;
     turnLock.current = true;
     setBusy(true);
     monthTimer.current = setTimeout(() => {
@@ -106,7 +187,7 @@ export default function App() {
             漢末群雄志<small>群雄對峙・建安十九年</small>
           </span>
         </a>
-        <span className="version">V0.1.1</span>
+        <span className="version">V0.2.0</span>
         {game && (
           <>
             <div className="date">
@@ -119,7 +200,11 @@ export default function App() {
             <button
               className="primary end-month"
               disabled={
-                busy || game.status !== "playing" || !!summary || !!report
+                busy ||
+                !!game.pendingBattle ||
+                game.status !== "playing" ||
+                !!summary ||
+                !!report
               }
               onClick={nextMonth}
             >
@@ -156,6 +241,12 @@ export default function App() {
           <section className="faction-select">
             <h2>擇一方諸侯 · 啟一世霸業</h2>
             <p className="hint">架空歷史劇本 ／ 214 年 1 月 ／ 十二城</p>
+            {corrupt && (
+              <div className="recovery-options">
+                <button onClick={downloadBackup}>匯出現有存檔備份</button>
+                <button onClick={recoverLegacy}>確認復原 V1 備份</button>
+              </div>
+            )}
             {resume && (
               <button
                 className="primary full continue"
@@ -203,6 +294,14 @@ export default function App() {
             )}
           </section>
         </main>
+      ) : game.pendingBattle ? (
+        <TacticalBattle
+          state={game}
+          battle={game.pendingBattle}
+          onAction={command}
+          onEnemy={advanceEnemy}
+          onFinish={finishBattle}
+        />
       ) : (
         <main className="campaign">
           <nav className="toolbar">
@@ -234,6 +333,7 @@ export default function App() {
               <CityPanel
                 state={game}
                 city={city}
+                onManual={manual}
                 onAction={act}
                 feedback={
                   actionNotice?.cityId === city.id ? actionNotice.text : ""
@@ -271,7 +371,7 @@ export default function App() {
         </main>
       )}
       <footer>
-        漢末群雄志 · 原創山河與人物徽章 ／ V0.1.1{" "}
+        漢末群雄志 · 原創山河與人物徽章 ／ V0.2.0{" "}
         <span>
           {game && !saveError ? "進度已自動儲存" : "本機存檔 · 無跨裝置同步"}
         </span>

@@ -27,3 +27,7 @@ npm run typecheck
 npm run test
 npm run build
 ```
+
+## V0.2.0 重驗
+
+未新增執行或測試相依套件，lockfile 僅更新應用版本。再次執行 npm ci、npm audit 及 omit-dev audit，完整與正式依賴均 0 漏洞；77 項測試、型別及正式建置均通過。

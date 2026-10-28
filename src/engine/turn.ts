@@ -3,7 +3,7 @@ import { runAI } from "./ai";
 import { settleCity } from "./economy";
 import { checkResult, event } from "./game";
 export function endMonth(state: GameState): GameState {
-  if (state.status !== "playing") return state;
+  if (state.status !== "playing" || state.pendingBattle) return state;
   let s = structuredClone(state);
   for (const f of s.factions)
     if (f.id !== s.playerId && f.active) s = runAI(s, f.id);

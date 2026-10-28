@@ -263,14 +263,18 @@ describe("武將連續操作", () => {
   });
 });
 describe("V0.1.0 原始存檔相容", () => {
-  it("不遷移、不重置，完整保持日期、世界、事件、戰報與 seed", () => {
+  it("僅遷移 schema，完整保持日期、世界、事件、戰報與 seed", () => {
     const s = deserialize(JSON.stringify(legacy));
-    expect(SAVE_KEY).toBe("hanmo-strategy-save-v1");
-    expect(s.version).toBe(1);
-    expect(s).toEqual(legacy);
+    expect(SAVE_KEY).toBe("hanmo-strategy-save-v2");
+    expect(s.version).toBe(2);
+    expect(s).toEqual({ ...legacy, version: 2, pendingBattle: null });
     expect(s.battles.length).toBeGreaterThan(0);
     expect(s.turn).toBeGreaterThan(0);
-    expect(deserialize(serialize(s))).toEqual(legacy);
+    expect(deserialize(serialize(s))).toEqual({
+      ...legacy,
+      version: 2,
+      pendingBattle: null,
+    });
   });
   it("舊檔可以直接巡察修築並再次存檔", () => {
     for (const type of commands) {

@@ -37,7 +37,7 @@ export function BattleReport({
         ) : (
           <>
             <h3 className={battle.won ? "ready" : "danger"}>
-              {battle.won ? "城門已破 · 占領成功" : "攻城失利 · 撤回原城"}
+              {battle.won ? "攻城得勝 · 占領成功" : "攻城失利 · 撤回原城"}
             </h3>
             <p>
               {battle.commander}率領 {n(battle.sent)} 兵出征
@@ -60,6 +60,21 @@ export function BattleReport({
               生還 {n(battle.survivors)} 人
               {battle.won ? `，隨主將進駐${battle.to}。` : "，已返回出發城池。"}
             </p>
+            {!!battle.defenseRouted && (
+              <p>
+                守軍撤退／潰散 {n(battle.defenseRouted)} 人；已依剩餘領土結算。
+              </p>
+            )}
+            {battle.tacticalEvents && (
+              <details>
+                <summary>戰術交戰明細</summary>
+                <div className="summary-list">
+                  {battle.tacticalEvents.map((e, i) => (
+                    <p key={i}>{e}</p>
+                  ))}
+                </div>
+              </details>
+            )}
             <button className="primary full" autoFocus onClick={onClose}>
               收閱戰報
             </button>

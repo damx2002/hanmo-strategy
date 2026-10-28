@@ -3,6 +3,7 @@ import { income } from "../engine/economy";
 import { ActionPanel } from "./ActionPanel";
 import { OfficerPanel } from "./OfficerPanel";
 export function CityPanel({
+  onManual,
   feedback,
   state,
   city,
@@ -10,6 +11,7 @@ export function CityPanel({
   locked,
   onTarget,
 }: {
+  onManual?: (a: Extract<Action, { targetId: string }>) => void;
   feedback?: string;
   state: GameState;
   city: City;
@@ -82,6 +84,7 @@ export function CityPanel({
           state={state}
           city={city}
           onAction={onAction}
+          onManual={onManual}
           feedback={feedback}
           locked={locked}
           onTarget={onTarget}
