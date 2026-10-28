@@ -187,7 +187,7 @@ export default function App() {
             漢末群雄志<small>群雄對峙・建安十九年</small>
           </span>
         </a>
-        <span className="version">V0.2.0</span>
+        <span className="version">V0.2.1</span>
         {game && (
           <>
             <div className="date">
@@ -371,7 +371,7 @@ export default function App() {
         </main>
       )}
       <footer>
-        漢末群雄志 · 原創山河與人物徽章 ／ V0.2.0{" "}
+        漢末群雄志 · 原創山河與人物徽章 ／ V0.2.1{" "}
         <span>
           {game && !saveError ? "進度已自動儲存" : "本機存檔 · 無跨裝置同步"}
         </span>

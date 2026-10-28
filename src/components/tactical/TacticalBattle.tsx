@@ -5,6 +5,9 @@ import type {
   TacticalState,
 } from "../../engine/tactical/types";
 import { TacticalMap } from "./TacticalMap";
+import { useCombatFeedback } from "./useCombatFeedback";
+import { selectionAfterUpdate } from "./selection";
+import { nextTacticalUnit } from "../../engine/tactical/feedback";
 import { UnitPanel } from "./UnitPanel";
 export function TacticalBattle({
   state,
@@ -19,12 +22,27 @@ export function TacticalBattle({
   onEnemy: () => void;
   onFinish: () => void;
 }) {
-  const [selected, setSelected] = useState(
-      battle.units.find((u) => u.side === "attacker" && u.troops > 0)?.id ?? "",
-    ),
+  const [selected, setSelected] = useState(nextTacticalUnit(battle, "")),
     [mode, setMode] = useState<"move" | "attack" | "fire">("move"),
     [retreat, setRetreat] = useState(false),
     [skip, setSkip] = useState(false);
+  const visibleFeedback = useCombatFeedback(battle.combatFeedback, skip);
+  const previous = useRef<{ id: string; attacked: boolean } | undefined>(
+    undefined,
+  );
+  useEffect(() => {
+    const next = selectionAfterUpdate(battle, selected, previous.current);
+    const current = battle.units.find((u) => u.id === selected);
+    previous.current = { id: selected, attacked: current?.attacked ?? true };
+    if (next !== selected) {
+      setSelected(next);
+      setMode("move");
+    }
+  }, [battle, selected]);
+  // A new phase shows the actual enemy results before the player asks for a new preview.
+  useEffect(() => {
+    setMode("move");
+  }, [battle.phase]);
   const lastEnd = useRef(0);
   function endPhase() {
     const now = Date.now();
@@ -90,6 +108,8 @@ export function TacticalBattle({
           battle={battle}
           selected={unit}
           mode={mode}
+          feedback={visibleFeedback}
+          skip={skip}
           onCell={cell}
         />
         <div>
@@ -102,6 +122,13 @@ export function TacticalBattle({
             onGate={() => unit && onAction({ type: "gate", unitId: unit.id })}
             locked={locked}
           />
+          <p className="phase-ready" role="status">
+            {battle.units
+              .filter((u) => u.side === "attacker" && u.troops > 0)
+              .every((u) => u.attacked)
+              ? "全軍已行動，可結束階段"
+              : "選取部隊下令；不會自動結束階段。"}
+          </p>
           <div className="battle-phase-buttons">
             <button className="primary" disabled={locked} onClick={endPhase}>
               {battle.phase === "defender" ? "守軍行動中…" : "結束階段"}
@@ -135,15 +162,7 @@ export function TacticalBattle({
           )}
         </div>
       </div>
-      <section
-        className={`tactical-feedback ${battle.effect?.kind === "fire" ? "effect-fire" : ""} ${skip ? "" : "with-effects"}`}
-        key={`${battle.turn}-${battle.events.length}-${battle.seed}`}
-        role="status"
-      >
-        {battle.effect?.text ??
-          "選取部隊下令；每隊每階段可移動一次、攻擊或火計一次。"}
-      </section>
-      <details className="tactical-events" open>
+      <details className="tactical-events">
         <summary>戰地紀事 · 已自動儲存</summary>
         <div>
           {battle.events.map((e, i) => (

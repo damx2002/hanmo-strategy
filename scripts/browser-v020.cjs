@@ -71,9 +71,7 @@ const url = process.env.GAME_URL || "http://127.0.0.1:4173/hanmo-strategy/";
     assert.ok(b);
     assert.equal(state.cities[5].troops, before.cities[5].troops - 20000);
     assert.equal(state.cities[5].food, before.cities[5].food - b.foodCost);
-    assert.ok(
-      await page.getByRole("button", { name: "結束本月 →" }).isDisabled(),
-    );
+    assert.ok(await page.locator(".end-month").isDisabled());
     assert.equal(
       b.units
         .filter((u) => u.side === "attacker")

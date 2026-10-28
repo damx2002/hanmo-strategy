@@ -1,7 +1,16 @@
+import { CombatReadout } from "./CombatReadout";
 import { useState } from "react";
-import type { TacticalState, Unit } from "../../engine/tactical/types";
+import type {
+  TacticalState,
+  Unit,
+  CombatFeedback,
+} from "../../engine/tactical/types";
 import { reachable } from "../../engine/tactical/movement";
-import { canAttack, fireReason } from "../../engine/tactical/damage";
+import {
+  canAttack,
+  fireReason,
+  damagePreview,
+} from "../../engine/tactical/damage";
 import {
   terrainNames,
   troopNames,
@@ -10,8 +19,12 @@ export function TacticalMap({
   battle,
   selected,
   mode,
+  feedback,
+  skip,
   onCell,
 }: {
+  feedback?: CombatFeedback[];
+  skip?: boolean;
   battle: TacticalState;
   selected: Unit | undefined;
   mode: "move" | "attack" | "fire";
@@ -43,12 +56,13 @@ export function TacticalMap({
           </button>
         </div>
       </div>
+      <CombatReadout battle={battle} selected={selected} mode={mode} />
       <div className="tactical-scroll" tabIndex={0} aria-label="戰場捲動區">
         <div
           className="battle-grid"
           role="group"
           aria-label="八乘六戰術棋盤"
-          style={{ width: `max(100%, ${zoom * 448}px)` }}
+          style={{ width: `max(${zoom * 100}%, ${zoom * 386}px)` }}
         >
           {battle.map.flatMap((row, y) =>
             row.map((terrain, x) => {
@@ -62,6 +76,15 @@ export function TacticalMap({
                 (mode === "attack"
                   ? canAttack(battle, selected, unit)
                   : mode === "fire" && !fireReason(battle, selected, unit));
+              const preview =
+                mode === "attack" && target && selected && unit
+                  ? damagePreview(battle, selected, unit)
+                  : null;
+              const hits = (feedback ?? []).filter(
+                  (f) => f.target.x === x && f.target.y === y,
+                ),
+                hit = hits.at(-1),
+                loss = hits.reduce((n, f) => n + f.casualties, 0);
               return (
                 <button
                   key={`${x}-${y}`}
@@ -69,6 +92,10 @@ export function TacticalMap({
                   data-y={y}
                   className={`battle-cell ${x === 7 && y === 2 ? "cell-keep" : ""} terrain-${terrain} ${unit ? `side-${unit.side}` : ""} ${selected?.id === unit?.id && unit ? "unit-selected" : ""} ${unit?.attacked ? "unit-acted" : ""} ${move ? "cell-move" : ""} ${target ? "cell-target" : ""}`}
                   aria-label={`${x + 1}列${y + 1}行 ${x === 7 && y === 2 ? "內城據點 " : ""}${terrainNames[terrain]}${unit ? ` ${unit.side === "attacker" ? "我軍" : "敵軍"}${troopNames[unit.type]} ${unit.troops.toLocaleString("zh-TW")}兵` : ""}${move ? " 可移動" : ""}${target ? " 可攻擊" : ""}`}
+                  data-target-id={unit?.id}
+                  data-preview-min={preview?.min}
+                  data-preview-max={preview?.max}
+                  data-matchup={preview?.multiplier}
                   onClick={() => onCell(x, y)}
                 >
                   <small className="tile-terrain">
@@ -110,6 +137,57 @@ export function TacticalMap({
                               ? "⚑"
                               : "▥"
                             : "·"}
+                    </span>
+                  )}
+                  {preview && (
+                    <span
+                      className={`target-preview preview-${preview.relation}`}
+                    >
+                      <span>
+                        {preview.min.toLocaleString("zh-TW")}–
+                        {preview.max.toLocaleString("zh-TW")}
+                      </span>
+                      <span>
+                        {preview.relation === "advantage"
+                          ? "克制 ↑"
+                          : preview.relation === "disadvantage"
+                            ? "劣勢 ↓"
+                            : "中立"}{" "}
+                        ×{preview.multiplier}
+                      </span>
+                    </span>
+                  )}
+                  {hit && (
+                    <span
+                      key={hit.sequence}
+                      className={`combat-hit ${skip ? "skip-motion" : ""} hit-${hit.kind}`}
+                      data-combat-seq={hit.sequence}
+                      data-casualties={loss}
+                      data-target-x={x}
+                      data-target-y={y}
+                      aria-label={hits.map((f) => f.text).join(" ")}
+                    >
+                      <span className="hit-flash" />
+                      <span className="damage-float">
+                        <b>
+                          {hits.length > 1
+                            ? `${hits.length}次受擊${hits.some((f) => f.relation === "advantage") ? "・含克制" : ""}`
+                            : hit.kind === "fire"
+                              ? `火計${hit.success ? "成功" : "失敗"}`
+                              : hit.kind === "gate"
+                                ? "城門"
+                                : hits.some((f) => f.relation === "advantage")
+                                  ? "兵種克制！"
+                                  : ""}
+                        </b>
+                        <strong>
+                          {hits.length > 1 ? "合計 " : ""}−
+                          {loss.toLocaleString("zh-TW")}
+                        </strong>
+                        {hit.destroyed && (
+                          <b>{hit.kind === "gate" ? "城門已破" : "部隊潰滅"}</b>
+                        )}
+                      </span>
                     </span>
                   )}
                 </button>

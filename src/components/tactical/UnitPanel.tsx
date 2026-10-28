@@ -41,8 +41,7 @@ export function UnitPanel({
         <p className="unit-numbers">
           兵力 {unit.troops.toLocaleString("zh-TW")}／
           {unit.maxTroops.toLocaleString("zh-TW")}
-          <br />
-          {terrainNames[battle.map[unit.y][unit.x]]} · 移動{" "}
+          <br /> {terrainNames[battle.map[unit.y][unit.x]]} · 移動{" "}
           {T.movement[unit.type]} ·{" "}
           {unit.attacked
             ? "本階段已行動"

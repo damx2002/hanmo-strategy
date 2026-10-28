@@ -31,3 +31,7 @@ npm run build
 ## V0.2.0 重驗
 
 未新增執行或測試相依套件，lockfile 僅更新應用版本。再次執行 npm ci、npm audit 及 omit-dev audit，完整與正式依賴均 0 漏洞；77 項測試、型別及正式建置均通過。
+
+## V0.2.1 重驗
+
+新增僅開發用 playwright-core 1.64.1（Node ≥20，現用Node24），用於CI Chromium smoke；不下載瀏覽器、不加入正式遊戲依賴。npm ci 重裝後，npm audit 與 omit-dev audit 皆為0漏洞。97項測試、型別及正式建置通過；CI以hosted Ubuntu預裝Chrome執行真實UI smoke後才發布。

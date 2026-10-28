@@ -15,6 +15,13 @@ export const T = {
   cityDefense: 0.007,
   damageScale: 0.28,
   maxLoss: 0.4,
+  absoluteMaxLoss: 0.6,
+  matchup: {
+    infantry: { infantry: 1, cavalry: 1.3, archer: 0.9 },
+    cavalry: { infantry: 0.85, cavalry: 1, archer: 1.35 },
+    archer: { infantry: 1.25, cavalry: 0.9, archer: 1 },
+  },
+  feedbackLimit: 24,
   finishCap: 100,
   randomMin: 0.94,
   randomRange: 0.12,

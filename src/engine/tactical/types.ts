@@ -21,7 +21,26 @@ export interface Commander {
   strength: number;
   intelligence: number;
 }
+export interface CombatFeedback {
+  sequence: number;
+  kind: "attack" | "fire" | "gate";
+  attackerId: string;
+  targetId: string | null;
+  target: { x: number; y: number };
+  casualties: number;
+  before: number;
+  after: number;
+  matchup: number;
+  relation: "advantage" | "disadvantage" | "neutral";
+  success: boolean;
+  destroyed: boolean;
+  side: Side;
+  turn: number;
+  text: string;
+}
 export interface TacticalState {
+  feedbackSequence?: number;
+  combatFeedback?: CombatFeedback[];
   id: number;
   sourceId: string;
   targetId: string;

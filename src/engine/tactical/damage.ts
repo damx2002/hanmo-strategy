@@ -1,6 +1,19 @@
-import type { TacticalState, Unit } from "./types";
+import type { TacticalState, Unit, TroopType } from "./types";
 import { T } from "./tacticalBalance";
 import { distance } from "./movement";
+export const matchupMultiplier = (attacker: TroopType, target: TroopType) =>
+  T.matchup[attacker][target];
+export const matchupRelation = (multiplier: number) =>
+  multiplier > 1
+    ? ("advantage" as const)
+    : multiplier < 1
+      ? ("disadvantage" as const)
+      : ("neutral" as const);
+export const relationNames = {
+  advantage: "兵種優勢",
+  disadvantage: "兵種劣勢",
+  neutral: "兵種中立",
+};
 export function inRange(b: TacticalState, u: Unit, v: Unit) {
   const d = distance(u, v);
   return u.type === "archer"
@@ -45,10 +58,19 @@ export function estimateDamage(
       : 1;
   const shot =
     u.type === "archer" && b.map[u.y][u.x] === "hill" ? T.hillShot : 1;
+  const matchup = matchupMultiplier(u.type, v.type);
   return Math.min(
     v.troops,
-    Math.max(T.finishCap, Math.ceil(v.troops * T.maxLoss)),
-    Math.max(1, Math.floor((at * charge * shot * variation) / de)),
+    Math.max(
+      T.finishCap,
+      Math.ceil(
+        Math.min(
+          v.troops * T.absoluteMaxLoss,
+          Math.min(u.troops, v.troops) * T.maxLoss * matchup,
+        ),
+      ),
+    ),
+    Math.max(1, Math.floor((at * charge * shot * variation * matchup) / de)),
   );
 }
 export function fireReason(b: TacticalState, u: Unit, v?: Unit): string {
@@ -80,4 +102,14 @@ export function fireChance(b: TacticalState, u: Unit, v: Unit) {
       intelligence * T.fireIntelligenceScale +
       (b.map[v.y][v.x] === "forest" ? T.fireForest : 0),
   );
+}
+
+export function damagePreview(b: TacticalState, u: Unit, v: Unit) {
+  const multiplier = matchupMultiplier(u.type, v.type);
+  return {
+    min: estimateDamage(b, u, v, T.randomMin),
+    max: estimateDamage(b, u, v, T.randomMin + T.randomRange),
+    multiplier,
+    relation: matchupRelation(multiplier),
+  };
 }

@@ -5,8 +5,15 @@ import type {
   Side,
 } from "./types";
 import { reachable, distance } from "./movement";
-import { canAttack, estimateDamage, fireReason, fireChance } from "./damage";
+import {
+  canAttack,
+  estimateDamage,
+  fireReason,
+  fireChance,
+  matchupMultiplier,
+} from "./damage";
 import { T, troopNames } from "./tacticalBalance";
+import { recordCombat } from "./feedback";
 import { random } from "../rng";
 export function log(b: TacticalState, text: string) {
   b.events.unshift(`第${b.turn}回合｜${text}`);
@@ -117,9 +124,10 @@ export function tacticalDispatch(
         ),
       ),
     );
+    const before = b.gate.hp;
     b.gate.hp -= loss;
     u.attacked = true;
-    text = `城門耐久 −${loss.toLocaleString("zh-TW")}${b.gate.hp === 0 ? "，城門已破！" : ""}`;
+    text = recordCombat(b, u, undefined, "gate", before, b.gate.hp);
   } else {
     const v = b.units.find((u) => u.id === a.targetId);
     if (!v) return fail("目標不存在。");
@@ -129,9 +137,18 @@ export function tacticalDispatch(
       const [r, next] = random(b.seed);
       b.seed = next;
       const loss = estimateDamage(b, u, v, T.randomMin + r * T.randomRange);
+      const before = v.troops;
       v.troops -= loss;
       u.attacked = true;
-      text = `${troopNames[u.type]}攻擊${troopNames[v.type]}，造成 ${loss.toLocaleString("zh-TW")} 傷亡。`;
+      text = recordCombat(
+        b,
+        u,
+        v,
+        "attack",
+        before,
+        v.troops,
+        matchupMultiplier(u.type, v.type),
+      );
     } else {
       const reason = fireReason(b, u, v);
       if (reason) return fail(reason);
@@ -143,8 +160,9 @@ export function tacticalDispatch(
         loss = success
           ? Math.min(v.troops, Math.ceil(v.troops * T.fireLoss))
           : 0;
+      const before = v.troops;
       v.troops -= loss;
-      text = `火計${success ? "成功" : "失敗"}，${troopNames[v.type]}損失 ${loss.toLocaleString("zh-TW")} 人。`;
+      text = recordCombat(b, u, v, "fire", before, v.troops, 1, success);
     }
   }
   b.effect = { kind: a.type, text, unitId: u.id };

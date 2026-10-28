@@ -87,3 +87,22 @@ GAME_URL=http://127.0.0.1:4173/hanmo-strategy/ PLAYWRIGHT_MODULE=/tmp/hanmo-brow
 腳本以 UI 合法調兵集結，不灌入戰果；取消軍議、親征、點部隊移動、真實攻擊與敵軍階段、勝利易主、戰後重載確認一次結算。使用 Chromium persistent profile 實際關閉／重啟後驗證完整戰中狀態。同場作戰逐階段輪替手機直向、橫向及桌面，實際下達移動／攻擊及敵軍階段；測試 412×915、915×412、360×800 的無水平溢出、至少44px格與指令、縮放；再驗證 V1 原檔備份及損毀 V2 明確復原。讀取純函式只用於選合法 UI 目標，所有實際戰果透過按鈕和格子操作。
 
 既有兩套瀏覽器回歸保留，調整新 save key／遷移預期及「委任作戰」按鈕名稱。
+
+## V0.2.1 回饋與手機版面
+
+- tacticalBalance.matchup 是唯一克制表；damage.ts 同時供預覽、正式攻擊、AI位置／威脅與選擇目標，沒有UI傷害副本。
+- tactical/feedback.ts 在攻擊、火計、破城後記錄結構化 CombatFeedback；validate.ts 對可選新欄位驗證序號、對象、座標、傷亡前後一致性。舊V2缺少欄位可直接讀取，無遷移與key變動。
+- useCombatFeedback 僅控制900ms的顯示生命週期；已見序號用ref保存，新載入不播放舊事件。永不呼叫遊戲指令。
+- TacticalMap 以事件目標座標畫浮字及受擊效果，pointer-events:none，邊角改向內對齊。CombatReadout 固定高度放在棋盤上緣，敵軍一次運算後列出各次實際損失；不用動畫節奏推動AI或兵力。
+- selectionAfterUpdate 只在所選部隊由未行動變成完成／潰滅後接續，手動換隊不被覆蓋，不自動結束階段。
+- 戰術模式縮短全站標題，隱藏無法操作的月結；棋盤格至少44px，狹窄螢幕於框內平移，主要指令與戰況可同時閱讀。reduced-motion與略過效果仍顯示數字。
+
+### V0.2.1 自動驗證
+
+保留77項原測試，新增 matchup.test.ts 後共97項。舊fixture/v0.2.0-battle-save.json 在修改前由原引擎產生，驗證原樣載入；新事件另驗證往返及損壞資料拒絕。
+
+`npm run test:browser` 自行啟停正式預覽（預設4174，可用SMOKE_PORT），執行 browser-v021.cjs。使用 playwright-core（僅開發依賴，不下載瀏覽器）；本機設定CHROMIUM_PATH，GitHub hosted Ubuntu用已安裝的Google Chrome。
+
+smoke以明確戰場前置狀態測試三組克制／中立／劣勢的預覽與正式傷亡、邊角浮字不裁切、不攔觸控、不捲頁、火計成功失敗、略過與減少動態、敵軍各筆摘要、部隊接續、全軍完成、持久化關閉重開及V1/V2相容。前置配置不是戰果：所有傷害都由實際UI點擊透過引擎產生，對照存檔前後及事件。原 browser-v020.cjs 仍保留從正常開局合法集兵到戰勝回寫的整場驗收。
+
+CI在原型別／測試／建置後執行此smoke，再允許上傳Pages產物；失敗會保存截圖。沒有新增正式執行依賴或改動既有戰鬥結算／經濟流程。

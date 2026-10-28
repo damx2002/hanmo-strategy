@@ -1,6 +1,7 @@
 import type { GameState } from "../types";
 import type { TacticalState } from "./types";
 import { createBattle } from "./createBattle";
+import { validCombatFeedback } from "./feedback";
 import { T } from "./tacticalBalance";
 import { inside, distance } from "./movement";
 const record = (v: unknown): v is Record<string, unknown> =>
@@ -119,6 +120,7 @@ export function validTactical(
     defenders = b.units
       .filter((u) => u.side === "defender")
       .reduce((n, u) => n + u.troops, 0);
+  if (!validCombatFeedback(b)) return false;
   if (b.status === "active")
     return attackers > 0 && defenders > 0 && b.reason === null;
   if (b.status === "attackerWon")
