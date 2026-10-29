@@ -1,12 +1,13 @@
 import type { City } from "./types";
 import { B, clamp } from "./balance";
 export function income(c: City) {
+  const scale = 1 + ((c.scale ?? 1) - 1) * 0.15;
   return {
     gold: Math.floor(
       (B.goldBase + c.commerce * B.commerceIncome) *
-        (B.securityIncomeBase + c.security * B.securityIncomeScale),
+        (B.securityIncomeBase + c.security * B.securityIncomeScale) * scale,
     ),
-    food: B.foodBase + c.agriculture * B.agricultureIncome,
+    food: Math.floor((B.foodBase + c.agriculture * B.agricultureIncome) * scale),
     upkeep: Math.ceil(c.troops * B.troopUpkeep),
   };
 }

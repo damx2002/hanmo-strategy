@@ -1,4 +1,5 @@
 import type { Action, ActionResult, FactionId, GameState } from "./types";
+import { P } from "./personnel";
 import { B, actionNames, clamp } from "./balance";
 import { checkResult, event } from "./game";
 import { domesticReason } from "./domestic";
@@ -14,6 +15,7 @@ export function dispatch(
   actor: FactionId = state.playerId,
 ): ActionResult {
   const fail = (error: string): ActionResult => ({ ok: false, state, error });
+  if (state.pendingDefense || (state.monthResolution && actor === state.playerId && state.monthResolution.stage !== "delegation")) return fail("月份處理中，請先完成守城或恢復回合。");
   if (state.pendingBattle) return fail("戰鬥尚未結束，不能下達其他軍令。");
   if (action.type === "attack") {
     const error = validateExpedition(state, action, actor);
@@ -85,10 +87,12 @@ export function dispatch(
     }
   } else {
     city.gold -= B.costs[action.type];
-    const growth = Math.floor(
+    const governor = s.officers.find((o) => o.id === city.governorId && o.factionId === actor && o.cityId === city.id);
+    const efficiency = (1 + (governor?.politics ?? 0) * P.governorScale) * (officer.traits?.includes("能吏") ? 1.05 : 1);
+    const growth = Math.floor(efficiency * (
       B.developmentBase +
         officer.politics * B.politicsScale +
-        officer.intelligence * B.intelligenceScale,
+        officer.intelligence * B.intelligenceScale),
     );
     if (action.type === "farm")
       city.agriculture = clamp(city.agriculture + growth);
