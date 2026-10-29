@@ -31,7 +31,12 @@ export function CityPanel({
 }) {
   const f = state.factions.find((f) => f.id === city.ownerId)!,
     i = income(city);
-  const officers = state.officers.filter((o) => o.cityId === city.id);
+  const officers = state.officers.filter(
+    (o) =>
+      o.cityId === city.id &&
+      !o.retired &&
+      (o.factionId !== null || o.discovered),
+  );
   return (
     <aside className="city-panel">
       <div className="city-title">
@@ -48,7 +53,8 @@ export function CityPanel({
       </div>
       <p className="hint">
         太守：
-        {state.officers.find((o) => o.id === city.governorId)?.name ?? "未任命"}{" "}
+        {state.officers.find((o) => o.id === city.governorId)?.name ??
+          "未任命"}{" "}
         · 城市規模 {city.scale ?? 1}
       </p>
       <div className="resources">

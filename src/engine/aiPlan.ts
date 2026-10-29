@@ -139,19 +139,38 @@ export function planAI(
       officerId: o.id,
       targetOfficerId: weak.id,
     };
+  // Stage a temporary offensive force against the weakest neighboring garrison.
+  // Stocks (including legal rear supplies) can support a larger army for several
+  // months; requiring perpetual local self-sufficiency locked equal armies forever.
+  const rivals = neighbors.filter((t) => t.ownerId !== actor);
   const wanted = border
-    ? Math.min(30000, Math.max(10000, ...enemies.map((t) => t.troops * 1.25)))
-    : 8000;
+    ? Math.min(
+        80000,
+        Math.max(
+          18000,
+          rivals.length
+            ? Math.min(...rivals.map((t) => t.troops * 2.8))
+            : 18000,
+        ),
+      )
+    : 10000;
   const newUpkeep = Math.ceil(
       (c.troops + B.recruitBase + o.charm * B.charmScale) * B.troopUpkeep,
     ),
     i = income(c);
   if (
     c.troops < wanted &&
+    c.agriculture < 100 &&
+    c.gold > 1000 &&
+    i.food < wanted * B.troopUpkeep
+  )
+    return { type: "farm", cityId: id, officerId: o.id };
+  if (
+    c.troops < wanted &&
     c.training >= 70 &&
     c.gold > 1300 &&
-    i.food >= newUpkeep &&
-    c.food - B.recruitFood + i.food - newUpkeep > 1400 + 2 * newUpkeep
+    (i.food >= newUpkeep || c.food >= newUpkeep * 8) &&
+    c.food - B.recruitFood + i.food - newUpkeep > 1400 + 4 * newUpkeep
   )
     return { type: "recruit", cityId: id, officerId: o.id };
   const planned = planDelegatedAction(

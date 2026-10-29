@@ -1166,7 +1166,10 @@ footer {
   color: #cfbf87;
 }
 .unit-banner {
-  font-size: 20px;
+  font-size: 16px;
+  line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
   position: relative;
   z-index: 1;
 }

@@ -393,6 +393,19 @@ const key = "hanmo-strategy-save-v3",
     );
     await enter(old021);
     assert.equal(await page.locator(".combat-hit").count(), 0);
+    const old023 = JSON.parse(
+      fs.readFileSync(
+        path.join(__dirname, "../src/tests/fixtures/v0.2.3-battle-save.json"),
+        "utf8",
+      ),
+    );
+    await enter(old023);
+    await page.getByRole("button", { name: "待機", exact: true }).click();
+    const continued023 = await read();
+    assert.deepEqual(continued023.delegation, old023.delegation);
+    assert.deepEqual(continued023.cities, old023.cities);
+    assert.deepEqual(continued023.officers, old023.officers);
+    assert.equal(continued023.pendingBattle.units[0].attacked, true);
     const v1 = JSON.parse(
       fs.readFileSync(
         path.join(__dirname, "../src/tests/fixtures/v0.1.1-save.json"),

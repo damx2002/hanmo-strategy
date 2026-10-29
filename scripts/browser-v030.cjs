@@ -135,12 +135,14 @@ const url = process.env.GAME_URL || "http://127.0.0.1:4173/hanmo-strategy/",
   const tile = (x, y) =>
     page.locator(`.battle-cell[data-x="${x}"][data-y="${y}"]`);
   try {
-    const viewports = process.env.SMOKE_VIEWPORT ? [process.env.SMOKE_VIEWPORT.split("x").map(Number)] : [
-      [412, 915],
-      [360, 800],
-      [915, 412],
-      [1440, 1000],
-    ];
+    const viewports = process.env.SMOKE_VIEWPORT
+      ? [process.env.SMOKE_VIEWPORT.split("x").map(Number)]
+      : [
+          [412, 915],
+          [360, 800],
+          [915, 412],
+          [1440, 1000],
+        ];
     for (const [width, height] of viewports) {
       const viewport = { width, height };
       profile = fs.mkdtempSync(path.join(os.tmpdir(), "hanmo-v030-"));
@@ -318,6 +320,27 @@ const url = process.env.GAME_URL || "http://127.0.0.1:4173/hanmo-strategy/",
       assert.match(
         await page.locator(".tactical-unit-panel").innerText(),
         /守軍/,
+      );
+      assert.ok(
+        await page.locator(".battle-cell.player-ally").evaluateAll((cells) =>
+          cells.every((cell) => {
+            const bounds = cell.getBoundingClientRect();
+            return [
+              ...cell.querySelectorAll(
+                ":scope > .unit-banner, :scope > strong",
+              ),
+            ].every((label) => {
+              const r = label.getBoundingClientRect();
+              return (
+                r.top >= bounds.top &&
+                r.bottom <= bounds.bottom &&
+                r.left >= bounds.left &&
+                r.right <= bounds.right
+              );
+            });
+          }),
+        ),
+        "軍旗與兵數不得換行溢出格子或重疊鄰格",
       );
       await page.screenshot({ path: `/tmp/hanmo-v030-defense-${width}.png` });
       await context.close();
