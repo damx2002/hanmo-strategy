@@ -1,0 +1,12 @@
+import { it, expect } from "vitest";
+import { newGame } from "../data/scenario";
+import { newScenarioGame } from "../data/scenarios";
+import { upgradeToV3, isGameState, deserialize, serialize } from "../engine/save";
+import { diplomacyDispatch, attackProhibition } from "../engine/diplomacy";
+import { dispatch } from "../engine/actions";
+import { planAI } from "../engine/aiPlan";
+it.each([1,1600])("外交成功／失敗均有費用與種子 %i",seed=>{const s=upgradeToV3(newGame("liu",seed));const r=diplomacyDispatch(s,{type:"alliance",cityId:"chengdu",officerId:"liu-0",targetFactionId:"cao"});expect(r.ok).toBe(true);expect(!!attackProhibition(r.state,"liu","cao")).toBe(seed===1);expect(r.state.cities[6].gold).toBe(s.cities[6].gold-300);expect(r.state.officers.find(o=>o.id==="liu-0")!.acted).toBe(true);expect(isGameState(r.state)).toBe(true)});
+it("贈禮、期限、解除條約實際限制出征",()=>{let s=upgradeToV3(newGame("liu",1));const gift=diplomacyDispatch(s,{type:"gift",cityId:"chengdu",officerId:"liu-0",targetFactionId:"cao"});expect(gift.ok).toBe(true);expect(gift.state.diplomacy![0].relation).toBe(20);s=diplomacyDispatch(s,{type:"truce",cityId:"chengdu",officerId:"liu-0",targetFactionId:"cao"}).state;expect(attackProhibition(s,"cao","liu")).toContain("停戰");expect(dispatch(s,{type:"attack",cityId:"hanzhong",officerId:"liu-3",targetId:"wan",troops:6000}).ok).toBe(false);expect(attackProhibition({...s,turn:3},"liu","cao")).toBe("");const x=diplomacyDispatch(s,{type:"break",cityId:"xiangyang",officerId:"liu-1",targetFactionId:"cao"});expect(x.ok).toBe(true);expect(attackProhibition(x.state,"liu","cao")).toBe("")});
+it("外交不能對自己、亡國或無指令使用，資料可往返",()=>{const s=upgradeToV3(newGame("liu"));expect(diplomacyDispatch(s,{type:"gift",cityId:"chengdu",officerId:"liu-0",targetFactionId:"liu"}).ok).toBe(false);const r=diplomacyDispatch(s,{type:"gift",cityId:"chengdu",officerId:"liu-0",targetFactionId:"cao"});expect(deserialize(serialize(r.state))).toEqual(r.state)});
+
+it("弱勢AI有同成本外交決策，輸入不改變且可重現",()=>{const s=newScenarioGame("three214","liu",42),before=serialize(s);const a=planAI(s,"zhang","chengdu",false,false)!;expect(a.type).toBe("alliance");expect(serialize(s)).toBe(before);expect(planAI(s,"zhang","chengdu",false,false)).toEqual(a);const r=diplomacyDispatch(s,a as import("../engine/diplomacy").DiplomaticAction,"zhang");expect(r.ok).toBe(true);expect(r.state.cities.find(c=>c.id==="chengdu")!.gold).toBe(s.cities.find(c=>c.id==="chengdu")!.gold-300)});
