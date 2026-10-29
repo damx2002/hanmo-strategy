@@ -39,7 +39,8 @@ export function setDelegationPolicy(
     !s.factions.some((f) => f.id === s.playerId && f.active)
   )
     return fail("遊戲已結束，不能修改委任。");
-  if (s.pendingBattle) return fail("戰鬥中不能修改委任。");
+  if (s.pendingBattle || s.pendingDefense || s.monthResolution)
+    return fail("戰鬥中不能修改委任。");
   if (!s.cities.some((c) => c.id === id && c.ownerId === s.playerId))
     return fail("只能設定目前己方城池。");
   if (!isPolicy(policy)) return fail("治理方針不合法。");
@@ -55,7 +56,12 @@ export function setRearDelegation(
   policy: "balanced" | "manual",
 ): ActionResult {
   // Shared setter enforces phase, ownership and policy even on direct callers.
-  if (s.status !== "playing" || s.pendingBattle)
+  if (
+    s.status !== "playing" ||
+    s.pendingBattle ||
+    s.pendingDefense ||
+    s.monthResolution
+  )
     return { ok: false, state: s, error: "目前不能修改委任。" };
   let n = s;
   for (const c of s.cities.filter(

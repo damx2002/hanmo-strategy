@@ -8,6 +8,9 @@ import { D } from "./balance";
 export function executeDelegatedCities(state: GameState): GameState {
   if (
     state.pendingBattle ||
+    state.pendingDefense ||
+    (state.monthResolution != null &&
+      state.monthResolution.stage !== "delegation") ||
     state.status !== "playing" ||
     !state.factions.some((f) => f.id === state.playerId && f.active) ||
     state.delegation?.processedTurn === state.turn

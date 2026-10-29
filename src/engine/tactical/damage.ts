@@ -1,3 +1,4 @@
+import { live } from "./control";
 import type { TacticalState, Unit, TroopType } from "./types";
 import { T } from "./tacticalBalance";
 import { distance } from "./movement";
@@ -22,11 +23,7 @@ export function inRange(b: TacticalState, u: Unit, v: Unit) {
 }
 export function canAttack(b: TacticalState, u: Unit, v: Unit) {
   return (
-    u.troops > 0 &&
-    v.troops > 0 &&
-    u.side !== v.side &&
-    !u.attacked &&
-    inRange(b, u, v)
+    live(u) && live(v) && u.side !== v.side && !u.attacked && inRange(b, u, v)
   );
 }
 export function estimateDamage(
@@ -36,19 +33,22 @@ export function estimateDamage(
   variation = 1,
   efficiency = 1,
 ) {
-  if (u.troops <= 0 || v.troops <= 0) return 0;
+  if (!live(u) || !live(v)) return 0;
   const general = b.commanders.find((o) => o.id === u.commanderId),
     guard = b.commanders.find((o) => o.id === v.commanderId);
   const at =
     u.troops *
     T.damageScale *
     T.attack[u.type] *
+    (general?.traits?.includes("猛將") ? T.traitAttack : 1) *
+    (T.moraleBase + (u.morale ?? 100) * T.moraleScale) *
     (1 +
       (general?.leadership ?? T.basicAbility) * T.leadership +
       (general?.strength ?? T.basicAbility) * T.strength) *
     (1 + b.training[u.side] * T.training);
   let de =
     T.defense[v.type] *
+    (guard?.traits?.includes("統御") ? T.traitDefense : 1) *
     T.terrain[b.map[v.y][v.x]] *
     (1 + (guard?.leadership ?? T.basicAbility) * T.leadership);
   if (v.side === "defender" && ["city", "gate"].includes(b.map[v.y][v.x]))
@@ -69,9 +69,7 @@ export function estimateDamage(
 }
 // Passive contact only; archers use weak close defense rather than their ranged shot.
 export function canRetaliate(u: Unit, v: Unit) {
-  return (
-    u.troops > 0 && v.troops > 0 && u.side !== v.side && distance(u, v) === 1
-  );
+  return live(u) && live(v) && u.side !== v.side && distance(u, v) === 1;
 }
 export function estimateRetaliation(
   b: TacticalState,
@@ -97,26 +95,26 @@ export function estimateExchange(
   const damage = estimateDamage(b, u, v, variation);
   const retaliation = estimateRetaliation(
     b,
-    { ...v, troops: v.troops - damage },
+    afterDamage(v, damage),
     u,
     variation,
   );
   return { damage, retaliation };
 }
 export function fireReason(b: TacticalState, u: Unit, v?: Unit): string {
-  if (u.troops <= 0 || u.attacked) return "部隊已行動或已潰滅";
+  if (!live(u) || u.attacked) return "部隊已行動或已潰滅";
   if (
     (b.commanders.find((o) => o.id === u.commanderId)?.intelligence ??
       T.basicAbility) < T.fireIntelligence
   )
     return `主將智力須達 ${T.fireIntelligence}`;
   if (b.fireUsed[u.side] >= T.fireLimit) return "本軍本戰火計次數已用盡";
-  if (v && (v.troops <= 0 || v.side === u.side || distance(u, v) > T.fireRange))
+  if (v && (!live(v) || v.side === u.side || distance(u, v) > T.fireRange))
     return "目標不在火計三格範圍內";
   if (
     !v &&
     !b.units.some(
-      (v) => v.troops > 0 && v.side !== u.side && distance(u, v) <= T.fireRange,
+      (v) => live(v) && v.side !== u.side && distance(u, v) <= T.fireRange,
     )
   )
     return "三格內沒有敵軍";
@@ -129,6 +127,11 @@ export function fireChance(b: TacticalState, u: Unit, v: Unit) {
   return Math.min(
     T.fireMaxChance,
     T.fireBase +
+      (b.commanders
+        .find((o) => o.id === u.commanderId)
+        ?.traits?.includes("軍師")
+        ? T.traitFire
+        : 0) +
       intelligence * T.fireIntelligenceScale +
       (b.map[v.y][v.x] === "forest" ? T.fireForest : 0),
   );
@@ -141,20 +144,31 @@ export function damagePreview(b: TacticalState, u: Unit, v: Unit) {
     max: estimateDamage(b, u, v, T.randomMin + T.randomRange),
     counterMin: estimateRetaliation(
       b,
-      {
-        ...v,
-        troops: v.troops - estimateDamage(b, u, v, T.randomMin + T.randomRange),
-      },
+      afterDamage(v, estimateDamage(b, u, v, T.randomMin + T.randomRange)),
       u,
       T.randomMin,
     ),
     counterMax: estimateRetaliation(
       b,
-      { ...v, troops: v.troops - estimateDamage(b, u, v, T.randomMin) },
+      afterDamage(v, estimateDamage(b, u, v, T.randomMin)),
       u,
       T.randomMin + T.randomRange,
     ),
     multiplier,
     relation: matchupRelation(multiplier),
   };
+}
+
+export function afterDamage(u: Unit, loss: number): Unit {
+  const n = { ...u, troops: Math.max(0, u.troops - loss) };
+  if (n.morale !== undefined && loss > 0) {
+    n.morale = Math.max(
+      0,
+      n.morale -
+        T.moraleShock -
+        Math.ceil((loss / n.maxTroops) * T.moraleLossScale),
+    );
+    n.routed = n.troops > 0 && n.morale <= T.routThreshold;
+  }
+  return n;
 }

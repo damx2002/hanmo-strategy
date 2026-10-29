@@ -20,7 +20,9 @@ export function runAI(state: GameState, actor: FactionId): GameState {
         .sort((a, b) => b.leadership - a.leadership)[0];
       if (!o) break;
       const neighbors = s.cities.filter((t) => c.neighbors.includes(t.id));
-      const enemies = neighbors.filter((t) => t.ownerId !== actor && !attackProhibition(s,actor,t.ownerId));
+      const enemies = neighbors.filter(
+        (t) => t.ownerId !== actor && !attackProhibition(s, actor, t.ownerId),
+      );
       let action: Action | undefined;
       const sent = Math.min(
         c.troops - B.guard,

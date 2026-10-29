@@ -2,6 +2,7 @@ import type { GameState } from "./types";
 import { scenarioTemplate, scenarioIds } from "../data/scenarios";
 import { B } from "./balance";
 import { T } from "./tactical/tacticalBalance";
+import { validResolution } from "./resolution/validate";
 import { validDelegation } from "./delegation/validate";
 import { validTactical } from "./tactical/validate";
 export const LEGACY_SAVE_KEY = "hanmo-strategy-save-v1";
@@ -16,15 +17,25 @@ export function isGameState(v: unknown): v is GameState {
   if (
     !record(v) ||
     (v.version !== 1 && v.version !== 2 && v.version !== 3) ||
-    !int(v.year, v.version === 3 && v.scenarioId === "warlords194" ? 194 : 214, 999999) ||
+    !int(
+      v.year,
+      v.version === 3 && v.scenarioId === "warlords194" ? 194 : 214,
+      999999,
+    ) ||
     !int(v.month, 1, 12) ||
     !int(v.turn, 0, 9999999) ||
     !int(v.seed, 0, 4294967295) ||
     !["playing", "won", "lost"].includes(String(v.status))
   )
     return false;
-  if (v.version === 3 && (typeof v.scenarioId !== "string" || !scenarioIds.includes(v.scenarioId))) return false;
-  const world = scenarioTemplate(v.version === 3 ? String(v.scenarioId) : "legacy");
+  if (
+    v.version === 3 &&
+    (typeof v.scenarioId !== "string" || !scenarioIds.includes(v.scenarioId))
+  )
+    return false;
+  const world = scenarioTemplate(
+    v.version === 3 ? String(v.scenarioId) : "legacy",
+  );
   const ids = world.factions.map((f) => f.id);
   if (!ids.includes(String(v.playerId))) return false;
   if (
@@ -86,7 +97,8 @@ export function isGameState(v: unknown): v is GameState {
           (k) => int(o[k], 1, 100),
         ) &&
         (o.factionId === null
-          ? (o.cityId === null || (v.version === 3 && cities.some((c) => c.id === o.cityId)))
+          ? o.cityId === null ||
+            (v.version === 3 && cities.some((c) => c.id === o.cityId))
           : ids.includes(String(o.factionId)) &&
             cities.some((c) => c.id === o.cityId && c.ownerId === o.factionId)),
     )
@@ -108,7 +120,10 @@ export function isGameState(v: unknown): v is GameState {
   )
     return false;
   const owned = cities.filter((c) => c.ownerId === v.playerId).length;
-  if (v.status !== (owned === 0 ? "lost" : owned === 12 ? "won" : "playing"))
+  if (
+    v.status !==
+    (owned === 0 ? "lost" : owned === cities.length ? "won" : "playing")
+  )
     return false;
   if (
     !Array.isArray(v.events) ||
@@ -129,12 +144,59 @@ export function isGameState(v: unknown): v is GameState {
     return false;
   const state = v as unknown as GameState;
   if (!validDelegation(v.delegation, state)) return false;
-  if (!state.officers.every((o) => (o.loyalty === undefined || int(o.loyalty,0,100)) && (o.discovered === undefined || typeof o.discovered === "boolean") && (o.retired === undefined || typeof o.retired === "boolean") && (o.traits === undefined || (Array.isArray(o.traits) && o.traits.length <= 4 && o.traits.every((t)=>["猛將","軍師","能吏","統御"].includes(t)))))) return false;
-  if (!state.cities.every((c) => (c.scale === undefined || int(c.scale,1,3)) && (c.governorId === undefined || state.officers.some((o)=>o.id===c.governorId && o.cityId===c.id && o.factionId===c.ownerId && !o.retired)))) return false;
+  if (
+    !state.officers.every(
+      (o) =>
+        (o.loyalty === undefined || int(o.loyalty, 0, 100)) &&
+        (o.discovered === undefined || typeof o.discovered === "boolean") &&
+        (o.retired === undefined || typeof o.retired === "boolean") &&
+        (o.traits === undefined ||
+          (Array.isArray(o.traits) &&
+            o.traits.length <= 4 &&
+            o.traits.every((t) =>
+              ["猛將", "軍師", "能吏", "統御"].includes(t),
+            ))),
+    )
+  )
+    return false;
+  if (
+    !state.cities.every(
+      (c) =>
+        (c.scale === undefined || int(c.scale, 1, 3)) &&
+        (c.governorId === undefined ||
+          state.officers.some(
+            (o) =>
+              o.id === c.governorId &&
+              o.cityId === c.id &&
+              o.factionId === c.ownerId &&
+              !o.retired,
+          )),
+    )
+  )
+    return false;
   if (v.version === 3) {
-    if (!Array.isArray(state.diplomacy) || state.diplomacy.length > ids.length*ids.length || !state.diplomacy.every((d)=>d && ids.includes(d.a) && ids.includes(d.b) && d.a<d.b && int(d.relation,-100,100) && int(d.allianceUntil,0,99999999) && int(d.truceUntil,0,99999999))) return false;
-    if (new Set(state.diplomacy.map((d)=>d.a+":"+d.b)).size !== state.diplomacy.length) return false;
-    if (state.monthResolution != null || state.pendingDefense != null) return false;
+    if (
+      !Array.isArray(state.diplomacy) ||
+      state.diplomacy.length > ids.length * ids.length ||
+      !state.diplomacy.every(
+        (d) =>
+          d &&
+          ids.includes(d.a) &&
+          ids.includes(d.b) &&
+          d.a < d.b &&
+          int(d.relation, -100, 100) &&
+          int(d.allianceUntil, 0, 99999999) &&
+          int(d.truceUntil, 0, 99999999) &&
+          (d.contactUntil === undefined || int(d.contactUntil, 0, 99999999)),
+      )
+    )
+      return false;
+    if (
+      new Set(state.diplomacy.map((d) => d.a + ":" + d.b)).size !==
+      state.diplomacy.length
+    )
+      return false;
+    if (!validResolution(state)) return false;
   }
   return v.battles.every(
     (b) =>
@@ -152,6 +214,27 @@ export function isGameState(v: unknown): v is GameState {
         (Array.isArray(b.tacticalEvents) &&
           b.tacticalEvents.length <= T.maxEvents &&
           b.tacticalEvents.every((e) => typeof e === "string"))) &&
+      (b.reinforcements === undefined ||
+        (Array.isArray(b.reinforcements) &&
+          b.reinforcements.length <= 2 &&
+          new Set(b.reinforcements.map((r) => (record(r) ? r.cityId : null)))
+            .size === b.reinforcements.length &&
+          b.reinforcements.every(
+            (r) =>
+              record(r) &&
+              cities.some((c) => c.id === r.cityId) &&
+              roster.some((o) => o.id === r.officerId) &&
+              ["sent", "loss", "survivors", "dispersed", "food"].every((k) =>
+                int(r[k], 0, B.maxResource),
+              ) &&
+              Number(r.sent) > 0 &&
+              Number(r.loss) + Number(r.survivors) === r.sent &&
+              Number(r.dispersed) <= Number(r.survivors) &&
+              r.food === Math.ceil(Number(r.sent) * B.foodPerTroop) &&
+              (r.returnedTo === null
+                ? r.dispersed === r.survivors
+                : cities.some((c) => c.id === r.returnedTo)),
+          ))) &&
       int(b.id, 0, 4294967295) &&
       [
         "sent",
@@ -181,18 +264,35 @@ export function migrate(s: GameState): GameState {
 }
 export function upgradeToV3(s: GameState): GameState {
   if (s.version === 3) return s;
-  return { ...structuredClone(migrate(s)), version: 3, scenarioId: "legacy", diplomacy: [], monthResolution: null, pendingDefense: null };
+  return {
+    ...structuredClone(migrate(s)),
+    version: 3,
+    scenarioId: "legacy",
+    diplomacy: [],
+    monthResolution: null,
+    pendingDefense: null,
+  };
 }
 export function loadGame(): { state: GameState | null; error: string } {
   try {
-    for (const [key,version] of [[SAVE_KEY,3],[V2_SAVE_KEY,2],[LEGACY_SAVE_KEY,1]] as const) {
-      const raw=localStorage.getItem(key); if(raw===null) continue;
-      if(JSON.parse(raw).version!==version) throw Error("版本與儲存位置不符");
-      return { state:upgradeToV3(deserialize(raw)), error:"" };
+    for (const [key, version] of [
+      [SAVE_KEY, 3],
+      [V2_SAVE_KEY, 2],
+      [LEGACY_SAVE_KEY, 1],
+    ] as const) {
+      const raw = localStorage.getItem(key);
+      if (raw === null) continue;
+      if (JSON.parse(raw).version !== version)
+        throw Error("版本與儲存位置不符");
+      return { state: upgradeToV3(deserialize(raw)), error: "" };
     }
-    return {state:null,error:""};
+    return { state: null, error: "" };
   } catch {
-    return {state:null,error:"無法讀取存檔：新版資料損毀或瀏覽器禁止儲存。沒有回退或覆寫舊進度；請先匯出備份，再明確復原V2／V1。"};
+    return {
+      state: null,
+      error:
+        "無法讀取存檔：新版資料損毀或瀏覽器禁止儲存。沒有回退或覆寫舊進度；請先匯出備份，再明確復原V2／V1。",
+    };
   }
 }
 export function saveGame(s: GameState): string {
@@ -233,11 +333,23 @@ export function exportSave(): string {
   });
 }
 
-export function restoreV2Backup(): {state:GameState|null;error:string} {
- try {
-  const raw=localStorage.getItem(V2_SAVE_KEY); if(raw===null||JSON.parse(raw).version!==2) throw Error("無V2備份");
-  const state=upgradeToV3(deserialize(raw)); const current=localStorage.getItem(SAVE_KEY);
-  if(current!==null && localStorage.getItem(SAVE_KEY+"-recovery-backup")===null) localStorage.setItem(SAVE_KEY+"-recovery-backup",current);
-  localStorage.setItem(SAVE_KEY,serialize(state)); return {state,error:""};
- } catch { return {state:null,error:"V2備份不存在、損毀或儲存失敗；現有資料未刪除。"}; }
+export function restoreV2Backup(): { state: GameState | null; error: string } {
+  try {
+    const raw = localStorage.getItem(V2_SAVE_KEY);
+    if (raw === null || JSON.parse(raw).version !== 2) throw Error("無V2備份");
+    const state = upgradeToV3(deserialize(raw));
+    const current = localStorage.getItem(SAVE_KEY);
+    if (
+      current !== null &&
+      localStorage.getItem(SAVE_KEY + "-recovery-backup") === null
+    )
+      localStorage.setItem(SAVE_KEY + "-recovery-backup", current);
+    localStorage.setItem(SAVE_KEY, serialize(state));
+    return { state, error: "" };
+  } catch {
+    return {
+      state: null,
+      error: "V2備份不存在、損毀或儲存失敗；現有資料未刪除。",
+    };
+  }
 }

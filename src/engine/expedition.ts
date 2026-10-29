@@ -1,4 +1,5 @@
 import type { GameState, FactionId, Battle } from "./types";
+import { attackProhibition } from "./diplomacy";
 import { B, clamp } from "./balance";
 import { checkResult, event } from "./game";
 export interface AttackOrder {
@@ -6,6 +7,7 @@ export interface AttackOrder {
   targetId: string;
   officerId: string;
   troops: number;
+  officerIds?: string[];
 }
 export interface ExpeditionResult {
   won: boolean;
@@ -25,6 +27,8 @@ export function validateExpedition(
   a: AttackOrder,
   actor: FactionId = s.playerId,
 ): string {
+  if (s.pendingDefense || (s.monthResolution && actor === s.playerId))
+    return "月份處理中不能自行出征。";
   if (s.pendingBattle) return "戰鬥尚未結束，不能下達其他軍令。";
   if (s.status !== "playing") return "遊戲已結束。";
   const c = s.cities.find((c) => c.id === a.cityId),
@@ -33,10 +37,29 @@ export function validateExpedition(
   if (!c || c.ownerId !== actor) return "只能指揮己方城池。";
   if (!o || o.factionId !== actor || o.cityId !== c.id)
     return "請選擇本城武將。";
+  if (
+    a.officerIds &&
+    (a.officerIds.length > 3 ||
+      !a.officerIds.includes(a.officerId) ||
+      new Set(a.officerIds).size !== a.officerIds.length ||
+      !a.officerIds.every((id) =>
+        s.officers.some(
+          (x) =>
+            x.id === id &&
+            x.cityId === c.id &&
+            x.factionId === actor &&
+            !x.acted &&
+            !x.retired,
+        ),
+      ))
+  )
+    return "參戰武將需為最多三名本城待命己將，並包含主將。";
   if (c.actions <= 0) return "本城本月指令已用盡。";
   if (o.acted) return "這位武將本月已行動。";
   if (!t || !c.neighbors.includes(t.id) || t.ownerId === actor)
     return "目標必須是相鄰敵城。";
+  const treaty = attackProhibition(s, actor, t.ownerId);
+  if (treaty) return treaty;
   if (
     !Number.isSafeInteger(a.troops) ||
     a.troops < 1 ||
@@ -53,7 +76,8 @@ export function reserveExpedition(s: GameState, a: AttackOrder): GameState {
   c.actions--;
   c.troops -= a.troops;
   c.food -= Math.ceil(a.troops * B.foodPerTroop);
-  n.officers.find((o) => o.id === a.officerId)!.acted = true;
+  for (const id of a.officerIds ?? [a.officerId])
+    n.officers.find((o) => o.id === id)!.acted = true;
   return n;
 }
 // Called only by a completed automatic battle or by the current pending battle ID.
@@ -92,7 +116,11 @@ export function settleExpedition(
     s.officers
       .filter((x) => x.cityId === target.id)
       .forEach((x) => {
-        x.cityId = retreat?.id ?? null;
+        x.cityId = retreat?.id ?? (s.version === 3 ? target.id : null);
+        if (s.version === 3) {
+          x.loyalty = Math.max(15, (x.loyalty ?? 80) - 15);
+          x.discovered = !!retreat;
+        }
         if (!retreat) x.factionId = null;
       });
     target.ownerId = attacker;
@@ -124,6 +152,11 @@ export function settleExpedition(
     s,
     `${o.name}率${a.troops.toLocaleString("zh-TW")}兵自${source.name}進攻${target.name}：${r.won ? "攻占成功" : "攻城失利"}。我軍損失${r.attackLoss.toLocaleString("zh-TW")}，守軍損失${r.defenseLoss.toLocaleString("zh-TW")}。`,
   );
+  if (r.won && a.officerIds)
+    for (const id of a.officerIds) {
+      const general = s.officers.find((o) => o.id === id);
+      if (general) general.cityId = target.id;
+    }
   s.pendingBattle = null;
   return checkResult(s);
 }

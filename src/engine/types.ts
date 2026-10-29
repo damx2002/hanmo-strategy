@@ -47,6 +47,16 @@ export interface City {
 }
 export interface Battle {
   defenseRouted?: number;
+  reinforcements?: {
+    cityId: string;
+    officerId: string;
+    sent: number;
+    loss: number;
+    survivors: number;
+    returnedTo: string | null;
+    dispersed: number;
+    food: number;
+  }[];
   mode?: "tactical" | "automatic";
   tacticalEvents?: string[];
   reason?: string;
@@ -96,6 +106,7 @@ export type Action =
       targetId: string;
       troops: number;
       food?: number;
+      officerIds?: string[];
     };
 export type ActionResult =
   | { ok: true; state: GameState }

@@ -44,7 +44,47 @@ export function createBattle(s: GameState, a: AttackOrder): TacticalState {
     }),
   );
   const hp = T.gateBase + target.defense * T.gateDefense;
+  const attackers =
+    s.version === 3
+      ? (a.officerIds ?? [officer.id]).map((id) =>
+          s.officers.find((o) => o.id === id)!,
+        )
+      : [officer];
+  const guards =
+    s.version === 3
+      ? s.officers
+          .filter(
+            (o) =>
+              o.cityId === target.id &&
+              o.factionId === target.ownerId &&
+              !o.retired,
+          )
+          .sort((a, b) => b.leadership - a.leadership)
+          .slice(0, 3)
+      : defender
+        ? [defender]
+        : [];
+  const units = [
+    ...splitUnits(a.troops, "attacker", officer.id),
+    ...splitUnits(target.troops, "defender", defender?.id ?? null),
+  ];
+  if (s.version === 3)
+    for (const u of units) {
+      const pool = u.side === "attacker" ? attackers : guards;
+      u.commanderId = pool.length
+        ? pool[Number(u.id.slice(-1)) % pool.length].id
+        : null;
+      u.morale = 100;
+      u.routed = false;
+    }
+
   return {
+    ...(s.version === 3
+      ? {
+          officerIds: attackers.map((o) => o.id),
+          playerSide: "attacker" as const,
+        }
+      : {}),
     id: s.seed,
     sourceId: source.id,
     targetId: target.id,
@@ -56,17 +96,15 @@ export function createBattle(s: GameState, a: AttackOrder): TacticalState {
     foodCost: Math.ceil(a.troops * B.foodPerTroop),
     training: { attacker: source.training, defender: target.training },
     defense: target.defense,
-    commanders: [officer, ...(defender ? [defender] : [])].map((o) => ({
+    commanders: [...attackers, ...guards].map((o) => ({
       id: o.id,
       leadership: o.leadership,
       strength: o.strength,
       intelligence: o.intelligence,
+      ...(s.version === 3 && o.traits ? { traits: o.traits } : {}),
     })),
     map,
-    units: [
-      ...splitUnits(a.troops, "attacker", officer.id),
-      ...splitUnits(target.troops, "defender", defender?.id ?? null),
-    ],
+    units,
     seed,
     turn: 1,
     phase: "attacker",

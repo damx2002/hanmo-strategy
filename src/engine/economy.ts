@@ -5,9 +5,12 @@ export function income(c: City) {
   return {
     gold: Math.floor(
       (B.goldBase + c.commerce * B.commerceIncome) *
-        (B.securityIncomeBase + c.security * B.securityIncomeScale) * scale,
+        (B.securityIncomeBase + c.security * B.securityIncomeScale) *
+        scale,
     ),
-    food: Math.floor((B.foodBase + c.agriculture * B.agricultureIncome) * scale),
+    food: Math.floor(
+      (B.foodBase + c.agriculture * B.agricultureIncome) * scale,
+    ),
     upkeep: Math.ceil(c.troops * B.troopUpkeep),
   };
 }
