@@ -1,5 +1,5 @@
 import type { TacticalState } from "./tactical/types";
-export type FactionId = "cao" | "liu" | "sun";
+export type FactionId = string;
 export interface Faction {
   id: FactionId;
   name: string;
@@ -18,6 +18,13 @@ export interface Officer {
   politics: number;
   charm: number;
   acted: boolean;
+  loyalty?: number;
+  discovered?: boolean;
+  born?: number;
+  died?: number;
+  availableFrom?: number;
+  traits?: string[];
+  retired?: boolean;
 }
 export interface City {
   id: string;
@@ -35,6 +42,8 @@ export interface City {
   training: number;
   defense: number;
   actions: number;
+  governorId?: string;
+  scale?: number;
 }
 export interface Battle {
   defenseRouted?: number;
@@ -58,7 +67,11 @@ export interface Battle {
 export interface GameState {
   /** Absent on older saves: every city is manual. */
   delegation?: import("./delegation/types").DelegationState;
-  version: 1 | 2;
+  version: 1 | 2 | 3;
+  scenarioId?: string;
+  diplomacy?: import("./diplomacy").DiplomaticRelation[];
+  monthResolution?: import("./resolution/types").MonthResolution | null;
+  pendingDefense?: import("./resolution/types").PendingDefense | null;
   pendingBattle?: TacticalState | null;
   year: number;
   month: number;

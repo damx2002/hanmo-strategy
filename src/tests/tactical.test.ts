@@ -30,6 +30,7 @@ import {
   SAVE_KEY,
   LEGACY_SAVE_KEY,
   restoreLegacy,
+  upgradeToV3,
 } from "../engine/save";
 import type { TacticalState, TacticalAction } from "../engine/tactical/types";
 import v010 from "./fixtures/v0.1.0-save.json";
@@ -409,18 +410,18 @@ describe("V2 存檔與安全遷移", () => {
     m.set(LEGACY_SAVE_KEY, JSON.stringify(v011));
     const old = m.get(LEGACY_SAVE_KEY);
     const legacy = loadGame();
-    expect(legacy.state?.version).toBe(2);
+    expect(legacy.state?.version).toBe(3);
     expect(saveGame(legacy.state!)).toBe("");
     expect(m.get(LEGACY_SAVE_KEY)).toBe(old);
     const n = newGame("sun", 999);
     saveGame(n);
-    expect(loadGame().state).toEqual(n);
+    expect(loadGame().state).toEqual(upgradeToV3(n));
     m.set(SAVE_KEY, "{broken");
     expect(loadGame().state).toBeNull();
     expect(loadGame().error).toContain("沒有回退");
     const r = restoreLegacy();
-    expect(r.state).toEqual({ ...v011, version: 2, pendingBattle: null });
-    expect(m.get("hanmo-strategy-save-v2-recovery-backup")).toBe("{broken");
+    expect(r.state).toEqual(upgradeToV3(deserialize(JSON.stringify(v011))));
+    expect(m.get("hanmo-strategy-save-v3-recovery-backup")).toBe("{broken");
     expect(m.get(LEGACY_SAVE_KEY)).toBe(old);
   });
   it("戰中移動、敵軍階段及 RNG 原樣續玩，不再次扣資源", () => {
@@ -437,7 +438,7 @@ describe("V2 存檔與安全遷移", () => {
     expect(enemyPhase(n)).toEqual(enemyPhase(s));
     const m = storage();
     expect(saveGame(n)).toBe("");
-    expect(loadGame().state).toEqual(n);
+    expect(loadGame().state).toEqual(upgradeToV3(n));
     expect(m.has(LEGACY_SAVE_KEY)).toBe(false);
   });
   it("拒絕破壞兵數、地圖、phase、位置、預留、行動狀態的戰中存檔", () => {

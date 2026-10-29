@@ -86,7 +86,7 @@ export function beginTactical(s: GameState, a: AttackOrder): ActionResult {
   if (error) return { ok: false, state: s, error };
   const battle = createBattle(s, a),
     next = reserveExpedition(s, a);
-  next.version = 2;
+  next.version = s.version === 3 ? 3 : 2;
   next.pendingBattle = battle;
   next.seed = battle.seed;
   return { ok: true, state: next };
