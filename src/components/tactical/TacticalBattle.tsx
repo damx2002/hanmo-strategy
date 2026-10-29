@@ -1,3 +1,4 @@
+import { playerSide, live } from "../../engine/tactical/control";
 import { useEffect, useRef, useState } from "react";
 import type { GameState } from "../../engine/types";
 import type {
@@ -26,6 +27,7 @@ export function TacticalBattle({
     [mode, setMode] = useState<"move" | "attack" | "fire">("move"),
     [retreat, setRetreat] = useState(false),
     [skip, setSkip] = useState(false);
+  const side = playerSide(battle);
   const visibleFeedback = useCombatFeedback(battle.combatFeedback, skip);
   const previous = useRef<{ id: string; attacked: boolean } | undefined>(
     undefined,
@@ -50,14 +52,14 @@ export function TacticalBattle({
     lastEnd.current = now;
     onAction({ type: "endPhase" });
   }
-  const unit = battle.units.find((u) => u.id === selected && u.troops > 0),
+  const unit = battle.units.find((u) => u.id === selected && live(u)),
     active = battle.status === "active",
-    locked = !active || battle.phase !== "attacker";
+    locked = !active || battle.phase !== side;
   useEffect(() => {
-    if (!active || battle.phase !== "defender") return;
+    if (!active || battle.phase === side) return;
     const timer = setTimeout(onEnemy, skip ? 0 : 350);
     return () => clearTimeout(timer);
-  }, [active, battle.phase, battle.turn, onEnemy, skip]);
+  }, [active, battle.phase, battle.turn, onEnemy, skip, side]);
   const source = state.cities.find((c) => c.id === battle.sourceId)!,
     target = state.cities.find((c) => c.id === battle.targetId)!;
   const count = (side: "attacker" | "defender") =>
@@ -67,10 +69,8 @@ export function TacticalBattle({
       .toLocaleString("zh-TW");
   function cell(x: number, y: number) {
     if (locked) return;
-    const clicked = battle.units.find(
-      (u) => u.x === x && u.y === y && u.troops > 0,
-    );
-    if (clicked?.side === "attacker") {
+    const clicked = battle.units.find((u) => u.x === x && u.y === y && live(u));
+    if (clicked?.side === side) {
       setSelected(clicked.id);
       setMode("move");
       return;
@@ -84,14 +84,19 @@ export function TacticalBattle({
     <main className="tactical-screen">
       <section className="battle-heading">
         <div>
-          <small>親 自 指 揮 · 攻 城 戰</small>
+          <small>
+            {side === "attacker"
+              ? "親 自 指 揮 · 攻 城 戰"
+              : "親 自 守 城 · 防 禦 戰"}
+          </small>
           <h1>
             {source.name} → {target.name}
           </h1>
           <p>
             第 {battle.turn}／16 回合 ·{" "}
-            {battle.phase === "attacker" ? "我軍階段" : "敵軍階段"} · 我軍{" "}
-            {count("attacker")} ／ 守軍 {count("defender")}
+            {battle.phase === side ? "我軍階段" : "敵軍階段"} · 我軍{" "}
+            {count(side)} ／ 敵軍{" "}
+            {count(side === "attacker" ? "defender" : "attacker")}
           </p>
         </div>
         <label className="animation-toggle">
@@ -124,14 +129,14 @@ export function TacticalBattle({
           />
           <p className="phase-ready" role="status">
             {battle.units
-              .filter((u) => u.side === "attacker" && u.troops > 0)
+              .filter((u) => u.side === side && live(u))
               .every((u) => u.attacked)
               ? "全軍已行動，可結束階段"
               : "選取部隊下令；不會自動結束階段。"}
           </p>
           <div className="battle-phase-buttons">
             <button className="primary" disabled={locked} onClick={endPhase}>
-              {battle.phase === "defender" ? "守軍行動中…" : "結束階段"}
+              {battle.phase !== side ? "敵軍行動中…" : "結束階段"}
             </button>
             <button
               disabled={locked}
@@ -144,16 +149,24 @@ export function TacticalBattle({
           {!active && (
             <section className="tactical-outcome" role="status">
               <h2>
-                {battle.status === "attackerWon" ? "攻城成功" : "攻城失敗"}
+                {(battle.status === "attackerWon") === (side === "attacker")
+                  ? side === "attacker"
+                    ? "攻城成功"
+                    : "守城成功"
+                  : side === "attacker"
+                    ? "攻城失敗"
+                    : "守城失敗"}
               </h2>
               <p>
                 {battle.reason === "retreat"
-                  ? "已下令撤退，生還部隊返回原城。"
+                  ? "已下令撤退，生還部隊依戰果返回友城。"
                   : battle.reason === "limit"
                     ? "守軍堅守至回合上限。"
                     : battle.reason === "occupation"
                       ? "內城已控制，守軍撤退。"
-                      : "敵我兵力已分勝負。"}
+                      : battle.reason === "morale"
+                        ? "一方部隊士氣潰退，生還兵依戰果回收。"
+                        : "敵我兵力已分勝負。"}
               </p>
               <button className="primary full" onClick={onFinish}>
                 結算戰果 · 返回戰略地圖
@@ -180,7 +193,9 @@ export function TacticalBattle({
           >
             <h2 id="retreat-title">確認撤退？</h2>
             <p>
-              此次攻城將判定失敗，生還士兵回到{source.name}
+              此次{side === "attacker" ? "攻城" : "守城"}
+              將判定失敗，生還士兵回到合法友城；出發地為
+              {side === "attacker" ? source.name : target.name}
               。已耗軍糧與指令不會退回。
             </p>
             <div className="button-row">

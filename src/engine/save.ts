@@ -13,7 +13,7 @@ const record = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null;
 const int = (v: unknown, min: number, max: number) =>
   typeof v === "number" && Number.isSafeInteger(v) && v >= min && v <= max;
-export function isGameState(v: unknown): v is GameState {
+function validState(v: unknown): v is GameState {
   if (
     !record(v) ||
     (v.version !== 1 && v.version !== 2 && v.version !== 3) ||
@@ -247,6 +247,15 @@ export function isGameState(v: unknown): v is GameState {
       Number(b.attackLoss) <= Number(b.sent) &&
       b.survivors === Number(b.sent) - Number(b.attackLoss),
   );
+}
+// A malformed optional V3 structure must produce a recoverable load error,
+// including values that cannot be accessed as the TypeScript model suggests.
+export function isGameState(v: unknown): v is GameState {
+  try {
+    return validState(v);
+  } catch {
+    return false;
+  }
 }
 export function serialize(s: GameState): string {
   return JSON.stringify(s);

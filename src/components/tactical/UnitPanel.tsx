@@ -1,3 +1,4 @@
+import { playerSide, live } from "../../engine/tactical/control";
 import type { TacticalState, Unit } from "../../engine/tactical/types";
 import { fireReason } from "../../engine/tactical/damage";
 import { distance } from "../../engine/tactical/movement";
@@ -26,8 +27,8 @@ export function UnitPanel({
   const unavailable =
     locked ||
     !unit ||
-    unit.side !== "attacker" ||
-    unit.troops <= 0 ||
+    unit.side !== playerSide(battle) ||
+    !live(unit) ||
     unit.attacked;
   const fire = unit ? fireReason(battle, unit) : "請先選取我軍部隊";
   return (
@@ -39,7 +40,8 @@ export function UnitPanel({
       </h3>
       {unit && (
         <p className="unit-numbers">
-          兵力 {unit.troops.toLocaleString("zh-TW")}／
+          {unit.morale !== undefined ? `士氣 ${unit.morale} · ` : ""}兵力{" "}
+          {unit.troops.toLocaleString("zh-TW")}／
           {unit.maxTroops.toLocaleString("zh-TW")}
           <br /> {terrainNames[battle.map[unit.y][unit.x]]} · 移動{" "}
           {T.movement[unit.type]} ·{" "}
@@ -79,6 +81,7 @@ export function UnitPanel({
         <button
           disabled={
             unavailable ||
+            unit?.side !== "attacker" ||
             unit?.type === "archer" ||
             battle.gate.hp === 0 ||
             !unit ||
@@ -91,7 +94,7 @@ export function UnitPanel({
       </div>
       <p className="hint">
         {fire ||
-          `火計剩餘 ${T.fireLimit - battle.fireUsed.attacker}／${T.fireLimit} 次；請點選紅框敵軍。`}
+          `火計剩餘 ${T.fireLimit - battle.fireUsed[playerSide(battle)]}／${T.fireLimit} 次；請點選紅框敵軍。`}
       </p>
       <p className="hint">
         城門耐久 {battle.gate.hp.toLocaleString("zh-TW")}／

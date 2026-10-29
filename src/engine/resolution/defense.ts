@@ -46,6 +46,7 @@ export function resolvePendingDefense(
   reinforcements: Omit<Reinforcement, "food">[] = [],
 ): ActionResult {
   const fail = (error: string): ActionResult => ({ ok: false, state, error });
+  if (mode !== "manual" && mode !== "auto") return fail("防守方式不合法。");
   const p = state.pendingDefense;
   if (!p || p.id !== id || !state.monthResolution || state.pendingBattle)
     return fail("警報不存在、已處理或回合不符。");

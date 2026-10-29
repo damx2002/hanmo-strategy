@@ -1,3 +1,4 @@
+import { attackProhibition } from "../engine/diplomacy";
 import { useEffect, useState } from "react";
 import type { Action, City, Domestic, GameState } from "../engine/types";
 import { B, actionNames } from "../engine/balance";
@@ -22,6 +23,7 @@ export function ActionPanel({
   locked: boolean;
   onTarget: (id?: string) => void;
 }) {
+  const [assist, setAssist] = useState<string[]>([]);
   const [type, setType] = useState<Domestic | "attack" | "transfer">("farm");
   const officers = state.officers.filter(
     (o) => o.cityId === city.id && o.factionId === state.playerId,
@@ -51,31 +53,37 @@ export function ActionPanel({
   const maxTroops = Math.max(0, city.troops - B.guard);
   const reason = locked
     ? "月份結算中"
-    : city.actions === 0
-      ? "本城本月指令已用盡，請結束本月"
-      : !officer
-        ? officers.length
-          ? "本城武將已全部行動"
-          : "本城沒有可用武將，請由友城調入"
-        : officer.acted
-          ? "此武將本月已行動"
-          : military && !target
-            ? "請選擇相鄰目標城池"
-            : military &&
-                (!Number.isSafeInteger(troops) ||
-                  troops < 0 ||
-                  troops > maxTroops ||
-                  (type === "attack" && troops === 0))
-              ? "兵力不合法"
-              : type === "transfer" &&
-                  (!Number.isSafeInteger(food) || food < 0 || food > city.food)
-                ? "調動兵糧不合法"
-                : type === "attack" &&
-                    city.food < Math.ceil(troops * B.foodPerTroop)
-                  ? "出征兵糧不足"
-                  : !military
-                    ? domesticReason(city, type as Domestic)
-                    : "";
+    : type === "attack" &&
+        target &&
+        attackProhibition(state, city.ownerId, target.ownerId)
+      ? attackProhibition(state, city.ownerId, target.ownerId)
+      : city.actions === 0
+        ? "本城本月指令已用盡，請結束本月"
+        : !officer
+          ? officers.length
+            ? "本城武將已全部行動"
+            : "本城沒有可用武將，請由友城調入"
+          : officer.acted
+            ? "此武將本月已行動"
+            : military && !target
+              ? "請選擇相鄰目標城池"
+              : military &&
+                  (!Number.isSafeInteger(troops) ||
+                    troops < 0 ||
+                    troops > maxTroops ||
+                    (type === "attack" && troops === 0))
+                ? "兵力不合法"
+                : type === "transfer" &&
+                    (!Number.isSafeInteger(food) ||
+                      food < 0 ||
+                      food > city.food)
+                  ? "調動兵糧不合法"
+                  : type === "attack" &&
+                      city.food < Math.ceil(troops * B.foodPerTroop)
+                    ? "出征兵糧不足"
+                    : !military
+                      ? domesticReason(city, type as Domestic)
+                      : "";
   function commandReason(command: keyof typeof actionNames) {
     if (locked) return "月份結算中";
     if (!city.actions) return "本城本月指令已用盡";
@@ -107,6 +115,18 @@ export function ActionPanel({
           targetId,
           troops,
           food,
+          ...(type === "attack" && state.version === 3
+            ? {
+                officerIds: [
+                  officerId,
+                  ...assist.filter(
+                    (id) =>
+                      id !== officerId &&
+                      officers.some((o) => o.id === id && !o.acted),
+                  ),
+                ].slice(0, 3),
+              }
+            : {}),
         }
       : { type: type as Domestic, cityId: city.id, officerId };
   const prediction =
@@ -161,6 +181,35 @@ export function ActionPanel({
           ))}
         </select>
       </label>
+      {type === "attack" && state.version === 3 && (
+        <details className="army-roster">
+          <summary>參戰武將 · 主將外最多兩人</summary>
+          <div>
+            {officers
+              .filter((o) => !o.acted && o.id !== officerId)
+              .map((o) => (
+                <label key={o.id}>
+                  <input
+                    type="checkbox"
+                    checked={assist.includes(o.id)}
+                    disabled={!assist.includes(o.id) && assist.length >= 2}
+                    onChange={(e) =>
+                      setAssist(
+                        e.target.checked
+                          ? [...assist, o.id]
+                          : assist.filter((id) => id !== o.id),
+                      )
+                    }
+                  />
+                  {o.name} · 統{o.leadership} · {o.traits?.join("／")}
+                </label>
+              ))}
+          </div>
+          <p className="hint">
+            參戰者均消耗本月武將行動；每城仍只用一令。不同單位由參戰武將統率。
+          </p>
+        </details>
+      )}
       {military ? (
         <>
           <label>

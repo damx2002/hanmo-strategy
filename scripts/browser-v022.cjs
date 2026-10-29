@@ -5,7 +5,7 @@ const { chromium } = require(
   process.env.PLAYWRIGHT_MODULE || "playwright-core",
 );
 const url = process.env.GAME_URL || "http://127.0.0.1:4173/hanmo-strategy/";
-const key = "hanmo-strategy-save-v2";
+const key = "hanmo-strategy-save-v3";
 (async () => {
   const browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
@@ -59,6 +59,7 @@ const key = "hanmo-strategy-save-v2";
       page = await context.newPage();
       page.on("pageerror", (e) => errors.push(e.message));
       await page.goto(url);
+      await page.getByLabel("歷史劇本").selectOption("legacy");
       await page.getByRole("button", { name: /劉備.*起兵/ }).click();
       await fits();
       assert.equal(
@@ -203,6 +204,7 @@ const key = "hanmo-strategy-save-v2";
     });
     page = await context.newPage();
     await page.goto(url);
+    await page.getByLabel("歷史劇本").selectOption("legacy");
     await page.getByRole("button", { name: /劉備.*起兵/ }).click();
     const base = await read();
     for (const [kind, text] of [
@@ -236,6 +238,7 @@ const key = "hanmo-strategy-save-v2";
     });
     page = await desktop.newPage();
     await page.goto(url);
+    await page.getByLabel("歷史劇本").selectOption("legacy");
     await page.getByRole("button", { name: /劉備.*起兵/ }).click();
     assert.ok(await page.locator(".map-frame").isVisible());
     assert.ok(await page.locator(".city-panel").isVisible());

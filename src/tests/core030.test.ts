@@ -276,3 +276,36 @@ it("不接受損壞的中斷摘要與援軍戰報", () => {
   done.battles[0].reinforcements![0].survivors++;
   expect(isGameState(done)).toBe(false);
 });
+
+it("格式錯誤的V3可選欄位安全拒絕而非拋出例外", () => {
+  const { state: s } = threatened();
+  const n = resolvePendingDefense(s, s.pendingDefense!.id, "manual").state;
+  for (const field of ["officerIds", "reinforcements", "commanders", "units"]) {
+    const broken = JSON.parse(serialize(n));
+    broken.pendingBattle[field] = "bad";
+    expect(() => isGameState(broken)).not.toThrow();
+    expect(isGameState(broken)).toBe(false);
+  }
+});
+it("帶援軍守城撤退時損失與生還均有去向且只套用一次", () => {
+  const { state: s } = threatened();
+  const started = resolvePendingDefense(s, s.pendingDefense!.id, "manual", [
+    { cityId: "chengdu", officerId: "liu-0", troops: 20000 },
+  ]).state;
+  const afterEnemy = enemyPhase(started),
+    before = sum(s); // Compare against pre-reservation world, which includes the expedition.
+  const retreat = applyTactical(afterEnemy, { type: "retreat" });
+  expect(retreat.ok).toBe(true);
+  const done = completeTactical(
+      retreat.state,
+      retreat.state.pendingBattle!.id,
+    ).state,
+    b = done.battles[0];
+  expect(b.won).toBe(true);
+  expect(done.cities.find((c) => c.id === "hanzhong")!.ownerId).toBe("cao");
+  expect(sum(done)).toBe(before - b.attackLoss - b.defenseLoss);
+  expect(b.reinforcements![0].returnedTo).toBe("chengdu");
+  expect(b.reinforcements![0].survivors).toBe(20000);
+  expect(completeTactical(done, b.id).ok).toBe(false);
+  expect(isGameState(done)).toBe(true);
+});

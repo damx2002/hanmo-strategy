@@ -7,7 +7,7 @@ const { chromium } = require(
 );
 const bundle = require("esbuild").buildSync({
   stdin: {
-    contents: `export {endMonth} from './src/engine/turn';export {settleCity} from './src/engine/economy';export {fieldNames} from './src/engine/delegation/summary';`,
+    contents: `export {upgradeToV3} from './src/engine/save';export {endMonth} from './src/engine/turn';export {settleCity} from './src/engine/economy';export {fieldNames} from './src/engine/delegation/summary';`,
     resolveDir: path.resolve(__dirname, ".."),
   },
   bundle: true,
@@ -15,7 +15,7 @@ const bundle = require("esbuild").buildSync({
   format: "esm",
   write: false,
 });
-const key = "hanmo-strategy-save-v2",
+const key = "hanmo-strategy-save-v3",
   url = process.env.GAME_URL || "http://127.0.0.1:4173/hanmo-strategy/";
 (async () => {
   const core = await import(
@@ -53,6 +53,7 @@ const key = "hanmo-strategy-save-v2",
       profile = fs.mkdtempSync(path.join(os.tmpdir(), "hanmo-v023-"));
       const viewport = { width, height };
       await open(viewport);
+      await page.getByLabel("歷史劇本").selectOption("legacy");
       await page.getByRole("button", { name: /劉備.*起兵/ }).click();
       await city("chengdu");
       const selector = () => page.getByLabel("成都治理方針"),
@@ -187,12 +188,21 @@ const key = "hanmo-strategy-save-v2",
         ),
       );
       await page.evaluate(
-        ({ key, old }) => localStorage.setItem(key, JSON.stringify(old)),
+        ({ key, old }) => {
+          localStorage.removeItem(key);
+          localStorage.setItem("hanmo-strategy-save-v2", JSON.stringify(old));
+        },
         { key, old },
       );
       await page.reload();
       await page.getByRole("button", { name: /繼續遊戲/ }).click();
-      assert.deepEqual(await read(), old);
+      assert.deepEqual(await read(), core.upgradeToV3(old));
+      assert.equal(
+        await page.evaluate(() =>
+          localStorage.getItem("hanmo-strategy-save-v2"),
+        ),
+        JSON.stringify(old),
+      );
       await city("chengdu");
       assert.equal(await selector().inputValue(), "manual");
       await city("hanzhong");

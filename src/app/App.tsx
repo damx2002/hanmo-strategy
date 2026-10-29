@@ -1,5 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { factions, newGame } from "../data/scenario";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import {
+  scenarioList,
+  scenarioTemplate,
+  newScenarioGame,
+} from "../data/scenarios";
+import type { ScenarioId } from "../data/scenarios";
+import {
+  startMonthResolution,
+  advanceMonthResolution,
+} from "../engine/resolution/month";
+import { resolvePendingDefense } from "../engine/resolution/defense";
+import type { Reinforcement } from "../engine/resolution/types";
+import { personnelDispatch } from "../engine/personnel";
+import type { PersonnelAction } from "../engine/personnel";
+import { diplomacyDispatch } from "../engine/diplomacy";
+import type { DiplomaticAction } from "../engine/diplomacy";
+import { DefenseCouncil } from "../components/DefenseCouncil";
+import { PersonnelPanel } from "../components/PersonnelPanel";
+import { DiplomacyPanel } from "../components/DiplomacyPanel";
 import type { Action, Battle, FactionId, GameState } from "../engine/types";
 import { dispatch } from "../engine/actions";
 import { endMonth } from "../engine/turn";
@@ -8,6 +26,7 @@ import {
   saveGame,
   SAVE_KEY,
   restoreLegacy,
+  restoreV2Backup,
   exportSave,
 } from "../engine/save";
 import { WorldMap } from "../components/WorldMap";
@@ -34,6 +53,10 @@ import {
 import type { TacticalAction } from "../engine/tactical/types";
 import { TacticalBattle } from "../components/tactical/TacticalBattle";
 export default function App() {
+  const [scenario, setScenario] = useState<ScenarioId>("warlords194");
+  const openingWorld = useMemo(() => scenarioTemplate(scenario), [scenario]);
+  const [systemNotice, setSystemNotice] = useState("");
+  const [rosterSearch, setRosterSearch] = useState("");
   const [loaded] = useState(loadGame);
   const [game, setGame] = useState<GameState | null>(null);
   const [resume, setResume] = useState(loaded.state);
@@ -74,7 +97,42 @@ export default function App() {
     [allOfficers, setAllOfficers] = useState(false),
     [restart, setRestart] = useState(false),
     [summary, setSummary] = useState<string[] | null>(null);
+  const factions = game?.factions ?? openingWorld.factions;
   const turnLock = useRef(false);
+  const monthBefore = useRef<{ turn: number; events: string[] } | null>(null);
+  useEffect(() => {
+    if (!game) return;
+    if (game.monthResolution) {
+      turnLock.current = true;
+      monthBefore.current ??= {
+        turn: game.monthResolution.turn,
+        events: game.monthResolution.eventsBefore ?? game.events,
+      };
+      if (game.pendingBattle || game.pendingDefense || report) return;
+      const timer = setTimeout(
+        () => setGame((s) => (s ? advanceMonthResolution(s, 8) : s)),
+        0,
+      );
+      return () => clearTimeout(timer);
+    }
+    if (monthBefore.current) {
+      const before = monthBefore.current;
+      monthBefore.current = null;
+      turnLock.current = false;
+      setBusy(false);
+      if (game.turn > before.turn) {
+        const delegated =
+          game.delegation?.report?.turn === before.turn
+            ? game.delegation.report.eventLines
+            : [];
+        setSummary(
+          game.events.filter(
+            (e) => !before.events.includes(e) && !delegated.includes(e),
+          ),
+        );
+      }
+    }
+  }, [game, report]);
   const monthTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -90,6 +148,11 @@ export default function App() {
   }, [game]);
   function enter(s: GameState) {
     setGame(s);
+    turnLock.current = !!s.monthResolution;
+    monthBefore.current = s.monthResolution
+      ? { turn: s.turn, events: s.monthResolution.eventsBefore ?? s.events }
+      : null;
+    setBusy(!!s.monthResolution);
     setTab("world");
     paneScroll.current = {};
     setActionNotice(null);
@@ -98,6 +161,49 @@ export default function App() {
     );
     setTarget(undefined);
     setNotice("");
+  }
+  function people(a: PersonnelAction) {
+    if (!game || turnLock.current) return;
+    const r = personnelDispatch(game, a);
+    if (r.ok) {
+      setGame(r.state);
+      setSystemNotice(r.state.events[0]);
+      setNotice("");
+    } else setSystemNotice(r.error);
+  }
+  function diplomacy(a: DiplomaticAction) {
+    if (!game || turnLock.current) return;
+    const r = diplomacyDispatch(game, a);
+    if (r.ok) {
+      setGame(r.state);
+      setSystemNotice(r.state.events[0]);
+      setNotice("");
+    } else setSystemNotice(r.error);
+  }
+  function defend(
+    mode: "manual" | "auto",
+    army: Omit<Reinforcement, "food">[],
+  ) {
+    if (!game?.pendingDefense) return;
+    const r = resolvePendingDefense(game, game.pendingDefense.id, mode, army);
+    if (r.ok) {
+      setGame(r.state);
+      setNotice("");
+      if (mode === "auto") setReport(r.state.battles[0]);
+    } else setNotice(r.error);
+  }
+  function recoverV2() {
+    if (
+      !window.confirm(
+        "確認從V2完整備份恢復？現有V3會另存復原備份，不會覆寫原V2。",
+      )
+    )
+      return;
+    const r = restoreV2Backup();
+    if (r.state) {
+      setCorrupt(false);
+      enter(r.state);
+    } else setNotice(r.error);
   }
   function configure(id: string, policy: Policy) {
     if (!game || turnLock.current) return;
@@ -189,7 +295,7 @@ export default function App() {
   function recoverLegacy() {
     if (
       !window.confirm(
-        "確認回到舊 V1 備份的進度？現有 V2 會另外保留為復原備份，不會靜默覆寫。",
+        "確認回到舊 V1 備份的進度？現有 V3 會另外保留為復原備份，不會靜默覆寫。",
       )
     )
       return;
@@ -204,9 +310,19 @@ export default function App() {
       !game ||
       turnLock.current ||
       game.pendingBattle ||
+      game.monthResolution ||
+      game.pendingDefense ||
       game.status !== "playing"
     )
       return;
+    if (game.version === 3) {
+      turnLock.current = true;
+      monthBefore.current = { turn: game.turn, events: game.events };
+      setBusy(true);
+      setActionNotice(null);
+      setGame(startMonthResolution(game));
+      return;
+    }
     turnLock.current = true;
     setBusy(true);
     monthTimer.current = setTimeout(() => {
@@ -252,10 +368,10 @@ export default function App() {
         <a className="brand" href="#" onClick={(e) => e.preventDefault()}>
           <span className="brand-seal">漢</span>
           <span>
-            漢末群雄志<small>群雄對峙・建安十九年</small>
+            漢末群雄志<small>歷史劇本・天下爭衡</small>
           </span>
         </a>
-        <span className="version">V0.2.3</span>
+        <span className="version">V0.3.0-dev</span>
         {game && (
           <>
             <div className="date">
@@ -264,7 +380,7 @@ export default function App() {
                 建安群雄 · {factions.find((f) => f.id === game.playerId)!.name}
                 軍 ·{" "}
                 {game.cities.filter((c) => c.ownerId === game.playerId).length}
-                ／12 城
+                ／{game.cities.length} 城
               </small>
             </div>
             <button
@@ -272,6 +388,8 @@ export default function App() {
               disabled={
                 busy ||
                 !!game.pendingBattle ||
+                !!game.monthResolution ||
+                !!game.pendingDefense ||
                 game.status !== "playing" ||
                 !!summary ||
                 !!report
@@ -303,17 +421,36 @@ export default function App() {
               <em>誰主沉浮</em>
             </h1>
             <p>
-              建安十九年，漢室衰微。
+              漢室衰微，群雄競逐。
               <br />
-              經略城邑，招兵練將，以十二座城池書寫你的天下。
+              經略城邑，招兵練將，以內政、人事、外交與戰爭書寫你的天下。
             </p>
           </div>
           <section className="faction-select">
             <h2>擇一方諸侯 · 啟一世霸業</h2>
-            <p className="hint">架空歷史劇本 ／ 214 年 1 月 ／ 十二城</p>
+            <label className="scenario-select">
+              歷史劇本
+              <select
+                aria-label="歷史劇本"
+                value={scenario}
+                onChange={(e) => setScenario(e.target.value as ScenarioId)}
+              >
+                {scenarioList.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} · {t.year}年
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="hint">
+              {scenarioList.find((t) => t.id === scenario)?.description}{" "}
+              {openingWorld.cities.length}城 · {openingWorld.officers.length}將
+              · {openingWorld.factions.length}勢力
+            </p>
             {corrupt && (
               <div className="recovery-options">
                 <button onClick={downloadBackup}>匯出現有存檔備份</button>
+                <button onClick={recoverV2}>確認復原 V2 備份</button>
                 <button onClick={recoverLegacy}>確認復原 V1 備份</button>
               </div>
             )}
@@ -323,39 +460,47 @@ export default function App() {
                 onClick={() => enter(resume)}
               >
                 繼續遊戲 · {resume.year} 年 {resume.month} 月 ·{" "}
-                {factions.find((f) => f.id === resume.playerId)?.name}
+                {resume.factions.find((f) => f.id === resume.playerId)?.name}
               </button>
             )}
-            {factions.map((f) => (
-              <button
-                className="faction-card"
-                key={f.id}
-                style={{ borderLeftColor: f.color }}
-                onClick={() => {
-                  if (resume || corrupt) {
-                    setRestart(true);
-                  } else enter(newGame(f.id));
-                }}
-              >
-                <span className="lord-seal" style={{ color: f.color }}>
-                  {f.name[0]}
-                </span>
-                <span>
-                  <strong>{f.name}</strong>
-                  <small>{f.motto}</small>
-                  <small>
-                    {f.id === "cao"
-                      ? "五城 · 中原沃土，四面通衢"
-                      : f.id === "liu"
-                        ? "四城 · 蜀地雄關，名將雲集"
-                        : "三城 · 江東富庶，精兵善戰"}
-                  </small>
-                </span>
-                <span>起兵 →</span>
-              </button>
-            ))}
+            <div className="faction-cards">
+              {openingWorld.factions.map((f) => (
+                <button
+                  className="faction-card"
+                  key={f.id}
+                  style={{ borderLeftColor: f.color }}
+                  onClick={() => {
+                    if (resume || corrupt) {
+                      setRestart(true);
+                    } else enter(newScenarioGame(scenario, f.id));
+                  }}
+                >
+                  <span className="lord-seal" style={{ color: f.color }}>
+                    {f.name[0]}
+                  </span>
+                  <span>
+                    <strong>{f.name}</strong>
+                    <small>{f.motto}</small>
+                    <small>
+                      {
+                        openingWorld.cities.filter((c) => c.ownerId === f.id)
+                          .length
+                      }
+                      城 ·{" "}
+                      {
+                        openingWorld.officers.filter(
+                          (o) => o.factionId === f.id,
+                        ).length
+                      }
+                      將
+                    </small>
+                  </span>
+                  <span>起兵 →</span>
+                </button>
+              ))}
+            </div>
             <p className="hint">
-              每城每月三令，每將每月一動。發展內政、調動兵糧，出征相鄰敵城；統一十二城即獲勝。進度僅存於此裝置的瀏覽器。
+              每城每月三令，每將每月一動。發展內政、調動兵糧，出征相鄰敵城；統一劇本全部城池即獲勝。進度僅存於此裝置的瀏覽器。
             </p>
             {(resume || corrupt) && (
               <button onClick={() => setRestart(true)}>
@@ -375,14 +520,34 @@ export default function App() {
       ) : (
         <main className="campaign" data-tab={tab} ref={campaignRef}>
           <nav className="toolbar">
+            <div className="desktop-strategy-nav" aria-label="桌面戰略導覽">
+              <button
+                aria-pressed={tab === "world" || tab === "city"}
+                onClick={() => changeTab("world")}
+              >
+                天下城務
+              </button>
+              <button
+                aria-pressed={tab === "officers"}
+                onClick={() => changeTab("officers")}
+              >
+                人事武將
+              </button>
+              <button
+                aria-pressed={tab === "intel"}
+                onClick={() => changeTab("intel")}
+              >
+                軍情外交
+              </button>
+            </div>
             <span>
               第 {game.turn + 1} 回合 ·{" "}
-              {game.cities.filter((c) => c.ownerId === game.playerId).length}
-              ／12 城
+              {game.cities.filter((c) => c.ownerId === game.playerId).length}／
+              {game.cities.length} 城
             </span>
             <div>
               <button onClick={() => setAllOfficers(true)}>
-                武將總覽 · 30
+                武將總覽 · {game.officers.length}
               </button>
               <button disabled={busy} onClick={() => setRestart(true)}>
                 新遊戲
@@ -472,7 +637,7 @@ export default function App() {
                   feedback={
                     actionNotice?.cityId === city.id ? actionNotice.text : ""
                   }
-                  locked={busy}
+                  locked={busy || !!game.monthResolution}
                   onTarget={setTarget}
                   onSelect={(id) => selectCity(id, true)}
                   onPolicy={configure}
@@ -488,8 +653,35 @@ export default function App() {
             aria-label="武將"
           >
             <h2>己方武將 · 待命與駐地</h2>
+            <PersonnelPanel
+              state={game}
+              onAction={people}
+              feedback={systemNotice}
+            />
+            <label className="roster-search">
+              搜尋武將
+              <input
+                aria-label="搜尋武將"
+                value={rosterSearch}
+                onChange={(e) => setRosterSearch(e.target.value)}
+                placeholder="姓名、特質或駐地"
+              />
+            </label>
             {game.cities
-              .filter((c) => c.ownerId === game.playerId)
+              .filter(
+                (c) =>
+                  c.ownerId === game.playerId &&
+                  (!rosterSearch ||
+                    game.officers.some(
+                      (o) =>
+                        o.cityId === c.id &&
+                        o.factionId === game.playerId &&
+                        !o.retired &&
+                        `${o.name}${o.traits?.join("")}${c.name}`.includes(
+                          rosterSearch,
+                        ),
+                    )),
+              )
               .map((c) => (
                 <section className="officer-city" key={c.id}>
                   <button onClick={() => selectCity(c.id, true)}>
@@ -497,7 +689,14 @@ export default function App() {
                   </button>
                   <OfficerPanel
                     officers={game.officers.filter(
-                      (o) => o.cityId === c.id && o.factionId === game.playerId,
+                      (o) =>
+                        o.cityId === c.id &&
+                        o.factionId === game.playerId &&
+                        !o.retired &&
+                        (!rosterSearch ||
+                          `${o.name}${o.traits?.join("")}${c.name}`.includes(
+                            rosterSearch,
+                          )),
                     )}
                     compact
                   />
@@ -509,6 +708,11 @@ export default function App() {
             data-pane="intel"
             data-active={tab === "intel"}
           >
+            <DiplomacyPanel
+              state={game}
+              onAction={diplomacy}
+              feedback={systemNotice}
+            />
             <div className="intel-tools">
               <button onClick={() => setAllOfficers(true)}>天下武將</button>
               <button disabled={busy} onClick={() => setRestart(true)}>
@@ -570,15 +774,23 @@ export default function App() {
         </main>
       )}
       <footer>
-        漢末群雄志 · 原創山河與人物徽章 ／ V0.2.3{" "}
+        漢末群雄志 · 原創山河與人物徽章 ／ V0.3.0-dev{" "}
         <span>
           {game && !saveError ? "進度已自動儲存" : "本機存檔 · 無跨裝置同步"}
         </span>
       </footer>
+      {game?.pendingDefense && (
+        <DefenseCouncil
+          key={game.pendingDefense.id}
+          state={game}
+          onResolve={defend}
+        />
+      )}
       {report && (
         <BattleReport
           key={`${report.id}-${report.from}`}
           battle={report}
+          state={game ?? undefined}
           onClose={() => setReport(null)}
         />
       )}
@@ -623,11 +835,17 @@ export default function App() {
             aria-labelledby="roster-title"
           >
             <div className="modal-title">
-              <h2 id="roster-title">天下武將 · 全三十名</h2>
+              <h2 id="roster-title">天下武將 · 全{game.officers.length}名</h2>
               <button autoFocus onClick={() => setAllOfficers(false)}>
                 關閉
               </button>
             </div>
+            <input
+              aria-label="天下武將搜尋"
+              placeholder="搜尋姓名"
+              value={rosterSearch}
+              onChange={(e) => setRosterSearch(e.target.value)}
+            />
             {[...factions, { id: null, name: "無所屬" }].map((f) => (
               <section key={f.id ?? "free"}>
                 <h3>
@@ -641,14 +859,19 @@ export default function App() {
                       <h4>{c.name}</h4>
                       <OfficerPanel
                         officers={game.officers.filter(
-                          (o) => o.cityId === c.id,
+                          (o) =>
+                            o.cityId === c.id &&
+                            !o.retired &&
+                            (!rosterSearch || o.name.includes(rosterSearch)),
                         )}
                       />
                     </div>
                   ))}
                 {!f.id && (
                   <OfficerPanel
-                    officers={game.officers.filter((o) => !o.factionId)}
+                    officers={game.officers.filter(
+                      (o) => !o.factionId && o.discovered && !o.retired,
+                    )}
                   />
                 )}
               </section>
@@ -670,7 +893,7 @@ export default function App() {
             </h2>
             <p>
               {game.status === "won"
-                ? "十二城旌旗盡歸麾下，亂世終得一統。"
+                ? "全境旌旗盡歸麾下，亂世終得一統。"
                 : "最後的城池已失守。此番霸業落幕，來日再戰。"}
             </p>
             <p>
@@ -695,7 +918,9 @@ export default function App() {
             aria-labelledby="restart-title"
           >
             <h2 id="restart-title">確認刪除舊存檔？</h2>
-            <p>此操作會刪除此瀏覽器的遊戲進度，返回勢力選擇。無法復原。</p>
+            <p>
+              此操作會刪除目前V3進度並返回劇本選擇。原V2／V1安全備份仍會保留；建議先匯出備份。
+            </p>
             <div className="button-row">
               <button autoFocus onClick={() => setRestart(false)}>
                 保留進度

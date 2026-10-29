@@ -7,7 +7,7 @@ const { chromium } = require(
 );
 const output = require("esbuild").buildSync({
   stdin: {
-    contents: `export {newGame} from './src/data/scenario';export {beginTactical} from './src/engine/tactical/createBattle';export {damagePreview} from './src/engine/tactical/damage';export {isGameState} from './src/engine/save';`,
+    contents: `export {newGame} from './src/data/scenario';export {beginTactical} from './src/engine/tactical/createBattle';export {damagePreview} from './src/engine/tactical/damage';export {upgradeToV3,isGameState} from './src/engine/save';`,
     resolveDir: path.resolve(__dirname, ".."),
   },
   bundle: true,
@@ -15,7 +15,7 @@ const output = require("esbuild").buildSync({
   format: "esm",
   write: false,
 });
-const key = "hanmo-strategy-save-v2",
+const key = "hanmo-strategy-save-v3",
   url = process.env.GAME_URL || "http://127.0.0.1:4173/hanmo-strategy/";
 (async () => {
   const core = await import(
@@ -84,13 +84,14 @@ const key = "hanmo-strategy-save-v2",
     b.seed = seed;
     n.seed = seed;
     assert.ok(core.isGameState(n));
-    return n;
+    return core.upgradeToV3(n);
   }
   const read = () =>
     page.evaluate((k) => JSON.parse(localStorage.getItem(k)), key);
   const tile = (x, y) =>
     page.locator(`.battle-cell[data-x="${x}"][data-y="${y}"]`);
   async function enter(state) {
+    state = core.upgradeToV3(state);
     await page.evaluate(
       ({ key, state }) => {
         localStorage.removeItem("hanmo-strategy-save-v1");
@@ -407,7 +408,10 @@ const key = "hanmo-strategy-save-v2",
     );
     await page.reload();
     await page.getByRole("button", { name: /繼續遊戲/ }).click();
-    assert.deepEqual(await read(), { ...v1, version: 2, pendingBattle: null });
+    assert.deepEqual(
+      await read(),
+      core.upgradeToV3({ ...v1, version: 2, pendingBattle: null }),
+    );
     assert.deepEqual(errors, []);
     console.log(
       "PASS V0.2.1：三組克制／中立劣勢預覽、真實目標浮字與兵損、火計成功失敗、略過及減少動態、潰滅／自動接續、敵軍各次摘要、無捲頁／觸控阻擋、三種手機尺寸、Chrome 重開、V1 與原 V2 存檔。",

@@ -46,6 +46,11 @@ export function CityPanel({
           {f.name}軍
         </span>
       </div>
+      <p className="hint">
+        太守：
+        {state.officers.find((o) => o.id === city.governorId)?.name ?? "未任命"}{" "}
+        · 城市規模 {city.scale ?? 1}
+      </p>
       <div className="resources">
         {[
           ["金錢", city.gold],
