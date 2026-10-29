@@ -13,6 +13,14 @@ import {
 import { WorldMap } from "../components/WorldMap";
 import { CityOverview } from "../components/CityOverview";
 import { cityReadiness } from "../components/cityOverview";
+import { DelegationReportView } from "../components/DelegationReport";
+import {
+  getPolicy,
+  policyShort,
+  setDelegationPolicy,
+  setRearDelegation,
+} from "../engine/delegation/policy";
+import type { Policy } from "../engine/delegation/types";
 import { CityPanel } from "../components/CityPanel";
 import { OfficerPanel } from "../components/OfficerPanel";
 import { actionFeedback } from "../components/actionSelection";
@@ -90,6 +98,31 @@ export default function App() {
     );
     setTarget(undefined);
     setNotice("");
+  }
+  function configure(id: string, policy: Policy) {
+    if (!game || turnLock.current) return;
+    const r = setDelegationPolicy(game, id, policy);
+    if (r.ok) {
+      setGame(r.state);
+      setNotice("");
+    } else setNotice(r.error);
+  }
+  function batchConfigure(policy: "balanced" | "manual") {
+    if (
+      !game ||
+      turnLock.current ||
+      !window.confirm(
+        policy === "manual"
+          ? "確認取消目前己方後方城池的委任？前線保持原設定，已花費資源不退回。"
+          : "確認將目前己方後方城池設為均衡發展？前線保持原設定。設定不消耗資源。",
+      )
+    )
+      return;
+    const r = setRearDelegation(game, policy);
+    if (r.ok) {
+      setGame(r.state);
+      setNotice("");
+    } else setNotice(r.error);
   }
   function act(a: Action) {
     if (!game || turnLock.current) return;
@@ -181,7 +214,15 @@ export default function App() {
         const next = endMonth(game);
         setGame(next);
         setActionNotice(null);
-        setSummary(next.events.filter((e) => !game.events.includes(e)));
+        const delegatedEvents =
+          next.delegation?.report?.turn === game.turn
+            ? next.delegation.report.eventLines
+            : [];
+        setSummary(
+          next.events.filter(
+            (e) => !game.events.includes(e) && !delegatedEvents.includes(e),
+          ),
+        );
         setTarget(undefined);
         setNotice("");
       } finally {
@@ -214,7 +255,7 @@ export default function App() {
             漢末群雄志<small>群雄對峙・建安十九年</small>
           </span>
         </a>
-        <span className="version">V0.2.2</span>
+        <span className="version">V0.2.3</span>
         {game && (
           <>
             <div className="date">
@@ -361,6 +402,12 @@ export default function App() {
                     <strong>
                       {city.name} ·{" "}
                       {game.factions.find((f) => f.id === city.ownerId)?.name}軍
+                      {city.ownerId === game.playerId && (
+                        <small className="policy-tag">
+                          {" "}
+                          · {policyShort[getPolicy(game, city.id)]}
+                        </small>
+                      )}
                     </strong>
                     <span>
                       兵 {city.troops.toLocaleString("zh-TW")} ·{" "}
@@ -428,6 +475,8 @@ export default function App() {
                   locked={busy}
                   onTarget={setTarget}
                   onSelect={(id) => selectCity(id, true)}
+                  onPolicy={configure}
+                  onBatch={batchConfigure}
                 />
               )}
             </section>
@@ -469,6 +518,15 @@ export default function App() {
             <h3>
               軍國紀事 <small>最新消息在前 · 最多保留 160 則</small>
             </h3>
+            {game.delegation?.report && (
+              <details className="delegation-history">
+                <summary>
+                  最近委任成果 · {game.delegation.report.year}年
+                  {game.delegation.report.month}月
+                </summary>
+                <DelegationReportView report={game.delegation.report} />
+              </details>
+            )}
             <div className="event-list">
               {game.events.map((text, i) => (
                 <p key={`${i}-${text}`}>
@@ -512,7 +570,7 @@ export default function App() {
         </main>
       )}
       <footer>
-        漢末群雄志 · 原創山河與人物徽章 ／ V0.2.2{" "}
+        漢末群雄志 · 原創山河與人物徽章 ／ V0.2.3{" "}
         <span>
           {game && !saveError ? "進度已自動儲存" : "本機存檔 · 無跨裝置同步"}
         </span>
@@ -527,7 +585,7 @@ export default function App() {
       {summary && (
         <div className="overlay">
           <section
-            className="modal"
+            className="modal monthly-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="summary-title"
@@ -535,10 +593,16 @@ export default function App() {
             <h2 id="summary-title">
               月度軍情 · {game?.year} 年 {game?.month} 月
             </h2>
-            <div className="summary-list">
-              {summary.map((e, i) => (
-                <p key={i}>{e}</p>
-              ))}
+            <div className="monthly-body">
+              {game?.delegation?.report?.turn === (game?.turn ?? 0) - 1 && (
+                <DelegationReportView report={game.delegation.report} />
+              )}
+              <h3>重大軍情與敵國行動</h3>
+              <div className="summary-list">
+                {summary.map((e, i) => (
+                  <p key={i}>{e}</p>
+                ))}
+              </div>
             </div>
             <button
               autoFocus

@@ -23,7 +23,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
-      - name: Chromium 戰鬥、反擊與手機分頁回歸
+      - name: Chromium 戰鬥、手機分頁與委任回歸
         env:
           CHROMIUM_PATH: /usr/bin/google-chrome
         run: npm run test:browser
@@ -35,6 +35,7 @@ jobs:
           path: |
             /tmp/hanmo-v021-failure.png
             /tmp/hanmo-v022-failure.png
+            /tmp/hanmo-v023-failure.png
           if-no-files-found: ignore
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

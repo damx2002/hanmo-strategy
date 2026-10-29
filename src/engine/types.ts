@@ -56,6 +56,8 @@ export interface Battle {
   won: boolean;
 }
 export interface GameState {
+  /** Absent on older saves: every city is manual. */
+  delegation?: import("./delegation/types").DelegationState;
   version: 1 | 2;
   pendingBattle?: TacticalState | null;
   year: number;

@@ -133,3 +133,29 @@ runAI應能產生合法意圖（內政、調動、出征），由共同dispatch�
 expedition的validate／reserve／settle可擴為帶source/defender/reinforcement reservations的計畫，保持共享兵力守恆；守城戰敗只在已完成結果套用時易主。settle需一次套用完成battle ID，清pending後才推進該cursor；同一存檔同一步重播必為拒絕或冪等，不能因React effect或Chrome重開再次reserve。AI每國每月最多一次主動出征及原有內政／經濟順序仍記在checkpoint。
 
 只有所有AI意圖完成後才執行全城經濟、年月前進與行動重置，並保存經濟已提交標記；戰鬥暫停時這些步驟都不能提前執行。需另定新schema遷移與損毀checkpoint復原，測試警報前後、預留前後、援軍中途、結算前後、月結提交前後的關閉續玩及重複提交。本版僅記錄此擴充方式，沒有加入手動防守或可暫停月結。
+
+## V0.2.3 獨立玩家委任模組
+
+- delegation/types.ts：方針、每城結果、真實前後差、月收與可選GameState.delegation。
+- balance.ts：目標、優先權重、資源緩衝及選將係數，均沿用原內政成本。
+- policy.ts：純函式設定、取消、後方批次與邊境判斷；不屬於消耗型Action。遊戲結束／戰中／敵城拒絕。
+- planner.ts：讀當前單城、待命武將與經濟預測，返回一個Domestic action或可解釋停手原因；零副作用、零RNG。
+- execute.ts：每城固定上限三次，每次重新plan，再走原dispatch。以processedTurn防相同月結果再提交；與敵軍runAI完全分離，不包含attack或transfer。
+- summary.ts：dispatch前後狀態轉為結構化結果，不預估或自行重算傷亡／成長。
+- validate.ts：驗證可選儲存資料，拒絕未知城／敵城政策、非法形狀／方針／時間、錯誤成本／前後差／重複武將。舊檔缺欄位直接按手動解讀，不改寫其世界。
+
+turn.ts的順序為validate → executeDelegatedCities → 原敵國runAI → settleCity並記錄己城月收 → 城將重置／日期更新 → checkResult。checkResult同時清除不再擁有城市的政策，捕獲結算全路徑共用；歷史報告可以保留失城當月的真實成果。原戰鬥、戰術、經濟與AI公式不改。
+
+App新增設定callback並沿用turnLock／autosave；沒有useEffect觸發委任。DelegationPanel僅呈現選單、說明與需明確確認的後方批次；城務／世界快速卡／總覽共用getPolicy。DelegationReportView由報告直接呈現，月度對話框使用固定標題／確認按鈕及中間可捲動區，避免底部聚焦把成果捲出畫面；軍情可重看最近一次。操作設定不建立會推動版面的全域訊息。
+
+### V0.2.3 驗證
+
+保留119項，新增delegation.test.ts的38項後共157項。包含五代原版fixture逐欄相容、設定無成本、四方針實際dispatch重播相等、手動兩令／只補一令、指令／武將不足、農商滿值轉向、資源保留／安全徵兵、選將、同月去重／讀檔、月收與支出真值、戰中互斥、失城／再奪回、24月治理與敵國合理戰機、帶委任戰術逐階段存取及相同戰果、正常劉備統一。原119項沒有刪除或弱化。
+
+fixtures/v0.2.2-save.json在任何V0.2.3變更前由V0.2.2引擎實際月結產生，不帶委任欄位。新遊戲也以缺欄位表示全部手動；新增資料後只使用原V2 key，原V1備份／損毀V2復原規則不變。
+
+CI test:browser依序保留browser-v021、browser-v022，再跑browser-v023：四個指定視窗、成都經濟與漢中手動、設定免費與不跳動、真實雙擊只結一次月、整個世界對照純引擎、月報逐筆數值與獨立收支、手動接管／取消、批次接受與拒絕、真正關閉／重開Chromium及原V0.2.2存檔。沿用僅開發用playwright-core與系統Chrome，不加依賴。保留browser-v020正常集兵整場攻城，另在開始前透過UI設定成都經濟，驗證戰中續玩與戰後方針仍在。
+
+### 後續可暫停防守銜接
+
+V0.3的TurnResolution需增加delegation階段與完成checkpoint，先提交委任／processedTurn／報告，再進敵軍cursor。敵方攻城警報暫停時不能重新進委任，也不能先做經濟或重置；恢復只從已儲存cursor向後繼續。過渡存檔可帶本月report但尚未附economy，結清月份後才寫月收。未來若允許階段中斷，必須明確持久化階段完成標記並測試各中斷點，不依賴React動畫／計時器。玩家城池軍事委任／援軍權限仍要另行建模，本版只授權六種內政。

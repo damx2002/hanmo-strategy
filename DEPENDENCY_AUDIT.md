@@ -39,3 +39,7 @@ npm run build
 ## V0.2.2 重驗（2026-10-28）
 
 未新增或升級任何專案套件；package-lock僅改應用版本。執行npm ci後再次查npm audit --json及npm audit --omit=dev --json：info／low／moderate／high／critical均0，正式依賴與開發工具分別確認。119項測試、strict TypeScript、production build通過，保留playwright-core Chromium CI。不使用audit fix --force。
+
+## V0.2.3 重驗（2026-10-29）
+
+沒有新增專案依賴，lockfile只更新版本。實際npm ci、npm audit及npm audit --omit=dev均通過，完整與正式依賴0漏洞；157項測試、型別與建置通過，沿用playwright-core與CI系統Chrome。

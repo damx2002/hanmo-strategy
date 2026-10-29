@@ -16,6 +16,11 @@ export function checkResult(s: GameState): GameState {
           o.cityId = null;
         });
   });
+  if (next.delegation) {
+    for (const id of Object.keys(next.delegation.policies))
+      if (!next.cities.some((c) => c.id === id && c.ownerId === next.playerId))
+        delete next.delegation.policies[id];
+  }
   const n = next.cities.filter((c) => c.ownerId === next.playerId).length;
   next.status = n === 0 ? "lost" : n === next.cities.length ? "won" : "playing";
   return next;

@@ -52,6 +52,8 @@ const url = process.env.GAME_URL || "http://127.0.0.1:4173/hanmo-strategy/";
   try {
     await open();
     await page.getByRole("button", { name: /劉備.*起兵/ }).click();
+    await page.getByRole("button", { name: /成都，/ }).click();
+    await page.getByLabel("成都治理方針").selectOption("economy");
     await moveTroops("成都", "hanzhong", "liu-0", 6000);
     await moveTroops("襄陽", "hanzhong", "liu-1", 7000);
     await page.getByRole("button", { name: /漢中，/ }).click();
@@ -241,6 +243,11 @@ const url = process.env.GAME_URL || "http://127.0.0.1:4173/hanmo-strategy/";
     await page.getByRole("button", { name: "收閱戰報" }).click();
     const finished = await read();
     assert.equal(finished.pendingBattle, null);
+    assert.equal(
+      finished.delegation.policies.chengdu,
+      "economy",
+      "委任設定在親征與戰中續玩後仍保留",
+    );
     assert.equal(finished.cities[4].ownerId, "liu");
     assert.equal(finished.cities[4].troops, survivors);
     assert.equal(finished.cities[5].troops, before.cities[5].troops - 20000);

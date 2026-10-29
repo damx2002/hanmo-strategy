@@ -2046,3 +2046,121 @@ footer {
     padding-block: 5px;
   }
 }
+/* V0.2.3: compact policy settings, no game-state mutation in presentation. */
+.policy-tag {
+  color: #cdbb83;
+  font-size: 11px;
+  font-weight: normal;
+}
+.delegation-settings {
+  border: 1px solid #626e50;
+  background: #182b23;
+  padding: 8px 10px;
+  margin-block: 8px;
+}
+.delegation-settings > label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gold);
+  font-size: 13px;
+}
+.delegation-settings select {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+}
+.delegation-note {
+  min-height: 48px;
+  margin: 5px 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.delegation-settings summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 10px;
+  font-size: 12px;
+}
+.delegation-batch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.delegation-batch button {
+  flex: 1;
+  font-size: 12px;
+  padding: 7px;
+}
+.delegation-report {
+  border: 1px solid #7b7d54;
+  padding: 8px 10px;
+  margin-block: 10px;
+  background: #182b23;
+}
+.delegation-report h3 {
+  margin: 0 0 7px;
+  color: #e5d29a;
+  font-size: 16px;
+}
+.delegation-report h3 small {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: normal;
+}
+.delegation-city-result {
+  padding-block: 5px;
+  border-top: 1px solid #4d5942;
+}
+.delegation-city-result summary {
+  cursor: pointer;
+  min-height: 48px;
+  font-size: 13px;
+}
+.delegation-city-result summary span {
+  display: block;
+  padding-left: 16px;
+  color: #c3c5a6;
+  font-size: 12px;
+}
+.delegation-city-result p {
+  font-size: 12px;
+  margin: 7px 0;
+}
+.delegation-city-result p small {
+  display: block;
+  color: var(--muted);
+}
+.delegation-economy {
+  font-size: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.delegation-economy summary,
+.delegation-history > summary {
+  cursor: pointer;
+  min-height: 44px;
+}
+.delegation-history {
+  padding: 8px 0;
+  color: #d7c594;
+}
+.monthly-modal {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.monthly-modal > h2,
+.monthly-modal > button {
+  flex-shrink: 0;
+}
+.monthly-body {
+  overflow: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+.monthly-body .summary-list {
+  max-height: none;
+  overflow: visible;
+}

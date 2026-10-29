@@ -1,3 +1,4 @@
+import { getPolicy, policyShort } from "../engine/delegation/policy";
 import type { City, GameState } from "../engine/types";
 import { cityReadiness, adjacentExpeditions } from "./cityOverview";
 const n = (v: number) => v.toLocaleString("zh-TW");
@@ -28,7 +29,11 @@ export function CityOverview({
                 onClick={() => onSelect(c.id)}
               >
                 <strong>
-                  {c.name} <small>{r.border ? "邊境" : "腹地"}</small>
+                  {c.name}{" "}
+                  <small>
+                    {r.border ? "邊境" : "腹地"} ·{" "}
+                    {policyShort[getPolicy(state, c.id)]}
+                  </small>
                 </strong>
                 <span>
                   兵 {n(c.troops)} · 金 {n(c.gold)} · 糧 {n(c.food)}

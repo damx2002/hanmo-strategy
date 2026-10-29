@@ -2,6 +2,7 @@ import type { GameState } from "./types";
 import { createCities, createOfficers } from "../data/scenario";
 import { B } from "./balance";
 import { T } from "./tactical/tacticalBalance";
+import { validDelegation } from "./delegation/validate";
 import { validTactical } from "./tactical/validate";
 export const LEGACY_SAVE_KEY = "hanmo-strategy-save-v1";
 export const SAVE_KEY = "hanmo-strategy-save-v2";
@@ -122,6 +123,7 @@ export function isGameState(v: unknown): v is GameState {
     )
   )
     return false;
+  if (!validDelegation(v.delegation, v as unknown as GameState)) return false;
   return v.battles.every(
     (b) =>
       record(b) &&

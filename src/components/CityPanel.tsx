@@ -3,8 +3,12 @@ import { income } from "../engine/economy";
 import { EnemyApproaches } from "./CityOverview";
 import { cityReadiness } from "./cityOverview";
 import { ActionPanel } from "./ActionPanel";
+import { DelegationPanel } from "./DelegationPanel";
+import type { Policy } from "../engine/delegation/types";
 import { OfficerPanel } from "./OfficerPanel";
 export function CityPanel({
+  onPolicy,
+  onBatch,
   onSelect,
   onManual,
   feedback,
@@ -14,6 +18,8 @@ export function CityPanel({
   locked,
   onTarget,
 }: {
+  onPolicy: (id: string, policy: Policy) => void;
+  onBatch: (policy: "balanced" | "manual") => void;
   onSelect: (id: string) => void;
   onManual?: (a: Extract<Action, { targetId: string }>) => void;
   feedback?: string;
@@ -85,6 +91,13 @@ export function CityPanel({
         {cityReadiness(state, city).reason} · 剩餘 {city.actions} 令 ·{" "}
         {cityReadiness(state, city).ready} 將待命
       </p>
+      <DelegationPanel
+        state={state}
+        city={city}
+        locked={locked}
+        onPolicy={onPolicy}
+        onBatch={onBatch}
+      />
       <details className="city-officers">
         <summary>駐城武將 · {officers.length}人</summary>
         <OfficerPanel officers={officers} compact />

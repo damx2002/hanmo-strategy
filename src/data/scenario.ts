@@ -162,6 +162,7 @@ export function newGame(playerId: FactionId, seed = 214019): GameState {
   return {
     version: 2,
     pendingBattle: null,
+    // No delegation settings means all cities are manually managed.
     year: 214,
     month: 1,
     turn: 0,

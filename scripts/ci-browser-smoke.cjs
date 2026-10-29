@@ -31,7 +31,11 @@ const path = require("node:path");
       await new Promise((r) => setTimeout(r, 250));
     }
     if (!ready) throw Error("正式產物預覽無法啟動");
-    for (const script of ["browser-v021.cjs", "browser-v022.cjs"]) {
+    for (const script of [
+      "browser-v021.cjs",
+      "browser-v022.cjs",
+      "browser-v023.cjs",
+    ]) {
       const child = spawn(process.execPath, [path.join(__dirname, script)], {
         stdio: "inherit",
         env: { ...process.env, GAME_URL: url },
