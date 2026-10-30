@@ -40,6 +40,17 @@ jobs:
             /tmp/hanmo-v023-failure.png
             /tmp/hanmo-v030-failure.png
           if-no-files-found: ignore
+      - name: 建立獨立儲存與路徑的 PWA 預覽包
+        if: github.ref != 'refs/heads/main'
+        env:
+          HANMO_BASE_PATH: /hanmo-strategy-preview/
+          VITE_HANMO_CHANNEL: preview
+        run: npm run build
+      - name: Chromium 測試 PWA 預覽版離線及存檔隔離
+        if: github.ref != 'refs/heads/main'
+        env:
+          CHROMIUM_PATH: /usr/bin/google-chrome
+        run: node scripts/ci-preview-smoke.cjs
       - name: 保存分支候選產物（不部署正式站）
         if: github.ref != 'refs/heads/main'
         uses: actions/upload-artifact@v4
