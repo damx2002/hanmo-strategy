@@ -6,6 +6,7 @@ const preview=process.env.PWA_PREVIEW==="1", key=preview?"hanmo-strategy-preview
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||"/usr/bin/chromium",headless:true,args:["--no-sandbox"]});
  const ctx=await browser.newContext({viewport:{width:412,height:915},serviceWorkers:"allow"});
  const page=await ctx.newPage();
+ const errors=[];page.on("pageerror",e=>errors.push(e.message));
  if(preview) await page.addInitScript(()=>localStorage.setItem("hanmo-strategy-save-v3","official-save-sentinel"));
  try {
   await page.goto(url);
@@ -20,6 +21,11 @@ const preview=process.env.PWA_PREVIEW==="1", key=preview?"hanmo-strategy-preview
   await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
   await ctx.setOffline(true);
   await page.reload({waitUntil:"domcontentloaded"});
+  try { await page.locator(".faction-cards button").first().waitFor({timeout:10000}); }
+  catch(e) {
+    console.error("OFFLINE DIAGNOSTICS",JSON.stringify({title:await page.title(),url:page.url(),html:(await page.locator("body").innerHTML()).slice(0,1000),errors,serviceWorker:await page.evaluate(()=>navigator.serviceWorker.controller?.scriptURL??null)}));
+    throw e;
+  }
   await page.locator(".faction-cards button").first().click();
   await page.waitForFunction(k=>localStorage.getItem(k)!==null,key);
   const saved=await page.evaluate(k=>localStorage.getItem(k),key);
