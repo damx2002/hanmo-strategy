@@ -20,7 +20,7 @@ const worker=[
 'self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(FILES))));',
 'self.addEventListener("activate",e=>e.waitUntil((async()=>{for(const k of await caches.keys())if(k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME)await caches.delete(k);await self.clients.claim();})()));',
 'self.addEventListener("message",e=>{if(e.data?.type==="SKIP_WAITING")self.skipWaiting();});',
-'self.addEventListener("fetch",e=>{const req=e.request,url=new URL(req.url);if(req.method!=="GET"||url.origin!==self.location.origin||!url.pathname.startsWith(APP_ROOT))return;if(req.mode==="navigate"){e.respondWith(fetch(req).then(r=>r.ok?r:Promise.reject(Error("offline"))).catch(async()=>await caches.match(APP_ROOT)||await caches.match(APP_ROOT+"index.html")||Response.error()));}else e.respondWith(caches.match(req).then(r=>r||fetch(req)));});'
+'self.addEventListener("fetch",e=>{const req=e.request,url=new URL(req.url);if(req.method!=="GET"||url.origin!==self.location.origin||!url.pathname.startsWith(APP_ROOT))return;if(req.mode==="navigate"){e.respondWith(fetch(req).then(r=>r.ok?r:Promise.reject(Error("offline"))).catch(async()=>await caches.match(APP_ROOT,{ignoreVary:true})||await caches.match(APP_ROOT+"index.html",{ignoreVary:true})||Response.error()));}else e.respondWith(caches.open(CACHE_NAME).then(c=>c.match(req,{ignoreVary:true,ignoreSearch:true})).then(r=>r||fetch(req)));});'
 ].join("\n");
 fs.writeFileSync(path.join(dist,"sw.js"),worker);
 console.log("PWA ready",channel,base,files.length,"files");

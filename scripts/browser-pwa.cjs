@@ -6,7 +6,7 @@ const preview=process.env.PWA_PREVIEW==="1", key=preview?"hanmo-strategy-preview
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||"/usr/bin/chromium",headless:true,args:["--no-sandbox"]});
  const ctx=await browser.newContext({viewport:{width:412,height:915},serviceWorkers:"allow"});
  const page=await ctx.newPage();
- const errors=[];page.on("pageerror",e=>errors.push(e.message));
+ const errors=[];page.on("pageerror",e=>errors.push(e.message));page.on("requestfailed",req=>errors.push("REQUEST "+req.url()+" "+req.failure()?.errorText));
  if(preview) await page.addInitScript(()=>localStorage.setItem("hanmo-strategy-save-v3","official-save-sentinel"));
  try {
   await page.goto(url);
@@ -23,7 +23,7 @@ const preview=process.env.PWA_PREVIEW==="1", key=preview?"hanmo-strategy-preview
   await page.reload({waitUntil:"domcontentloaded"});
   try { await page.locator(".faction-cards button").first().waitFor({timeout:10000}); }
   catch(e) {
-    console.error("OFFLINE DIAGNOSTICS",JSON.stringify({title:await page.title(),url:page.url(),html:(await page.locator("body").innerHTML()).slice(0,1000),errors,serviceWorker:await page.evaluate(()=>navigator.serviceWorker.controller?.scriptURL??null)}));
+    console.error("OFFLINE DIAGNOSTICS",JSON.stringify({title:await page.title(),url:page.url(),html:(await page.locator("body").innerHTML()).slice(0,1000),head:(await page.locator("head").innerHTML()).slice(0,1600),errors,cache:await page.evaluate(async()=>{const ks=await caches.keys();const ret=[];for(const k of ks){const c=await caches.open(k);ret.push({name:k,urls:(await c.keys()).map(x=>x.url)});}return ret;}),serviceWorker:await page.evaluate(()=>navigator.serviceWorker.controller?.scriptURL??null)}));
     throw e;
   }
   await page.locator(".faction-cards button").first().click();
