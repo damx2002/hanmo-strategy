@@ -1,8 +1,8 @@
 const {spawn}=require("node:child_process");
 const path=require("node:path");
 (async()=>{
-  const port=process.env.PWA_PREVIEW_PORT||"4175",url="http://127.0.0.1:"+port+"/hanmo-strategy-preview/";
-  const server=spawn(process.execPath,[path.join(__dirname,"../node_modules/vite/bin/vite.js"),"preview","--host","127.0.0.1","--port",port,"--strictPort"],{stdio:"inherit",env:{...process.env,HANMO_BASE_PATH:"/hanmo-strategy-preview/",VITE_HANMO_CHANNEL:"preview"}});
+  const port=process.env.PWA_PREVIEW_PORT||"4175",url="http://127.0.0.1:"+port+"/hanmo-strategy/preview/";
+  const server=spawn(process.execPath,[path.join(__dirname,"../node_modules/vite/bin/vite.js"),"preview","--host","127.0.0.1","--port",port,"--strictPort"],{stdio:"inherit",env:{...process.env,HANMO_BASE_PATH:"/hanmo-strategy/preview/",VITE_HANMO_CHANNEL:"preview"}});
   let done=false;server.on("exit",()=>{done=true;});
   try{
     let ready=false;
