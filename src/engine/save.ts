@@ -6,7 +6,7 @@ import { validResolution } from "./resolution/validate";
 import { validDelegation } from "./delegation/validate";
 import { validTactical } from "./tactical/validate";
 // Preview and production can share the same github.io origin.
-const ns = import.meta.env.VITE_HANMO_CHANNEL === "preview" ? "hanmo-strategy-preview" : "hanmo-strategy";
+const ns = typeof import.meta.env !== "undefined" && import.meta.env.VITE_HANMO_CHANNEL === "preview" ? "hanmo-strategy-preview" : "hanmo-strategy";
 export const LEGACY_SAVE_KEY = `${ns}-save-v1`;
 export const V2_SAVE_KEY = `${ns}-save-v2`;
 export const SAVE_KEY = `${ns}-save-v3`;
