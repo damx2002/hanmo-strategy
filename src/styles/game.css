@@ -2335,3 +2335,11 @@ footer {
     display: none;
   }
 }
+
+/* PWA standalone safe areas, update notice, save tools */
+@media (display-mode: standalone) { body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); } }
+.pwa-update { position:sticky; bottom:0; z-index:30; display:flex; justify-content:space-between; align-items:center; gap:.7rem; padding: .7rem 1rem; background:#213a30; border-top:1px solid #cba665; color:#e3ca91; }
+.pwa-update button { min-height:44px; flex-shrink:0; }
+.save-tools { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin:1rem 0; }
+.save-tools label, .recovery-options label { display:flex; flex-direction:column; gap:.2rem; font-size:.9rem; }
+.save-tools input[type=file], .recovery-options input[type=file] { max-width:230px; }

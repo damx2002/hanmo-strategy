@@ -5,9 +5,11 @@ import { T } from "./tactical/tacticalBalance";
 import { validResolution } from "./resolution/validate";
 import { validDelegation } from "./delegation/validate";
 import { validTactical } from "./tactical/validate";
-export const LEGACY_SAVE_KEY = "hanmo-strategy-save-v1";
-export const V2_SAVE_KEY = "hanmo-strategy-save-v2";
-export const SAVE_KEY = "hanmo-strategy-save-v3";
+// Preview and production can share the same github.io origin.
+const ns = import.meta.env.VITE_HANMO_CHANNEL === "preview" ? "hanmo-strategy-preview" : "hanmo-strategy";
+export const LEGACY_SAVE_KEY = `${ns}-save-v1`;
+export const V2_SAVE_KEY = `${ns}-save-v2`;
+export const SAVE_KEY = `${ns}-save-v3`;
 
 const record = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null;
@@ -322,9 +324,9 @@ export function restoreLegacy(): { state: GameState | null; error: string } {
     const current = localStorage.getItem(SAVE_KEY);
     if (
       current !== null &&
-      localStorage.getItem("hanmo-strategy-save-v3-recovery-backup") === null
+      localStorage.getItem(SAVE_KEY + "-recovery-backup") === null
     )
-      localStorage.setItem("hanmo-strategy-save-v3-recovery-backup", current);
+      localStorage.setItem(SAVE_KEY + "-recovery-backup", current);
     localStorage.setItem(SAVE_KEY, serialize(s));
     return { state: s, error: "" };
   } catch {
@@ -360,5 +362,29 @@ export function restoreV2Backup(): { state: GameState | null; error: string } {
       state: null,
       error: "V2備份不存在、損毀或儲存失敗；現有資料未刪除。",
     };
+  }
+}
+
+/** Import only an explicitly chosen JSON backup; protect current channel's save first. */
+export function importSaveBackup(raw: string): { state: GameState | null; error: string } {
+  try {
+    const data: unknown = JSON.parse(raw);
+    if (!record(data)) throw Error("invalid backup");
+    let state: GameState | null = null;
+    for (const [field, version] of [["v3", 3], ["v2", 2], ["v1", 1]] as const) {
+      const value = data[field];
+      if (typeof value !== "string" || !value) continue;
+      const object: unknown = JSON.parse(value);
+      if (!record(object) || object.version !== version) throw Error("incorrect version");
+      state = upgradeToV3(deserialize(value));
+      break;
+    }
+    if (!state) throw Error("no usable backup");
+    const previous = localStorage.getItem(SAVE_KEY);
+    if (previous !== null) localStorage.setItem(SAVE_KEY + "-import-backup", previous);
+    localStorage.setItem(SAVE_KEY, serialize(state));
+    return { state, error: "" };
+  } catch {
+    return { state: null, error: "匯入失敗：檔案格式／存檔資料不合法或空間不足。原進度不會主動刪除。" };
   }
 }

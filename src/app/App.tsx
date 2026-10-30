@@ -28,6 +28,7 @@ import {
   restoreLegacy,
   restoreV2Backup,
   exportSave,
+  importSaveBackup,
 } from "../engine/save";
 import { WorldMap } from "../components/WorldMap";
 import { CityOverview } from "../components/CityOverview";
@@ -52,6 +53,7 @@ import {
 } from "../engine/tactical/resolve";
 import type { TacticalAction } from "../engine/tactical/types";
 import { TacticalBattle } from "../components/tactical/TacticalBattle";
+import { PwaUpdateNotice } from "../components/PwaUpdateNotice";
 export default function App() {
   const [scenario, setScenario] = useState<ScenarioId>("warlords194");
   const openingWorld = useMemo(() => scenarioTemplate(scenario), [scenario]);
@@ -292,6 +294,16 @@ export default function App() {
       setNotice("無法匯出備份，請檢查瀏覽器權限。");
     }
   }
+  async function importBackup(file: File | undefined) {
+    if (!file) return;
+    if (!window.confirm("確認匯入備份？目前進度會先保留在本機復原備份。")) return;
+    try {
+      if (file.size > 10 * 1024 * 1024) throw Error("file too large");
+      const result = importSaveBackup(await file.text());
+      if (result.state) { setCorrupt(false); enter(result.state); }
+      else setNotice(result.error);
+    } catch { setNotice("無法讀取備份，請確認檔案格式及大小。"); }
+  }
   function recoverLegacy() {
     if (
       !window.confirm(
@@ -450,6 +462,7 @@ export default function App() {
             {corrupt && (
               <div className="recovery-options">
                 <button onClick={downloadBackup}>匯出現有存檔備份</button>
+                <label>匯入 JSON 備份 <input type="file" accept=".json,application/json" onChange={(e) => { void importBackup(e.target.files?.[0]); e.target.value = ""; }} /></label>
                 <button onClick={recoverV2}>確認復原 V2 備份</button>
                 <button onClick={recoverLegacy}>確認復原 V1 備份</button>
               </div>
@@ -502,6 +515,10 @@ export default function App() {
             <p className="hint">
               每城每月三令，每將每月一動。發展內政、調動兵糧，出征相鄰敵城；統一劇本全部城池即獲勝。進度僅存於此裝置的瀏覽器。
             </p>
+            <div className="save-tools">
+              <button onClick={downloadBackup}>匯出存檔備份</button>
+              <label>匯入備份 <input type="file" accept=".json,application/json" onChange={(e) => { void importBackup(e.target.files?.[0]); e.target.value = ""; }} /></label>
+            </div>
             {(resume || corrupt) && (
               <button onClick={() => setRestart(true)}>
                 刪除舊存檔／開始新遊戲
@@ -774,11 +791,15 @@ export default function App() {
         </main>
       )}
       <footer>
-        漢末群雄志 · 原創山河與人物徽章 ／ V0.3.0{" "}
+        漢末群雄志 · 原創山河與人物徽章 ／ V0.3.0{import.meta.env.VITE_HANMO_CHANNEL === "preview" ? " · 預覽版（獨立存檔）" : ""}{" "}
         <span>
           {game && !saveError ? "進度已自動儲存" : "本機存檔 · 無跨裝置同步"}
         </span>
       </footer>
+      <PwaUpdateNotice
+        canUpdate={!game?.pendingBattle && !game?.pendingDefense && !game?.monthResolution && !busy && !summary && !report}
+        saveBeforeUpdate={() => !game || saveGame(game) === ""}
+      />
       {game?.pendingDefense && (
         <DefenseCouncil
           key={game.pendingDefense.id}
