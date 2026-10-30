@@ -1,53 +1,110 @@
-name: 部署 GitHub Pages
+name: 漢末群雄志｜正式版＋同倉庫 PWA 預覽
 on:
   push:
+    branches: [main, feat/v030-core-game]
+  pull_request:
     branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
   id-token: write
+
+# GitHub Pages 只有一個站點：部署時必須同時保留正式版與 /preview/
 concurrency:
   group: pages
   cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: 取回正式 main（只讀、不修改遊戲程式）
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: stable
+      - name: 取回 V0.3.0 預覽開發分支
+        uses: actions/checkout@v4
+        with:
+          ref: feat/v030-core-game
+          path: preview-src
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run test
-      - run: npm run build
-      - name: Chromium 戰鬥、手機分頁與委任回歸
+
+      - name: 正式 V0.2.3 測試及建置
+        working-directory: stable
+        run: |
+          npm ci
+          npm run typecheck
+          npm run test
+          npm run build
+      - name: 正式 V0.2.3 Chromium 測試
+        working-directory: stable
         env:
           CHROMIUM_PATH: /usr/bin/google-chrome
         run: npm run test:browser
-      - name: 保存失敗畫面
-        if: failure()
+
+      - name: V0.3.0 候選版測試及預設路徑建置
+        working-directory: preview-src
+        run: |
+          npm ci
+          npm run typecheck
+          npm run test
+          npm run build
+      - name: V0.3.0 所有戰略／戰術／PWA Chromium 回歸
+        working-directory: preview-src
+        env:
+          CHROMIUM_PATH: /usr/bin/google-chrome
+        run: npm run test:browser
+
+      - name: 建置同網站子目錄 /hanmo-strategy/preview/
+        working-directory: preview-src
+        env:
+          HANMO_BASE_PATH: /hanmo-strategy/preview/
+          VITE_HANMO_CHANNEL: preview
+        run: npm run build
+
+      - name: 測試預覽版離線、續玩與正式版存檔隔離
+        working-directory: preview-src
+        env:
+          CHROMIUM_PATH: /usr/bin/google-chrome
+        run: node scripts/ci-preview-smoke.cjs
+
+      - name: 組合唯一 GitHub Pages 網站產物
+        run: |
+          mkdir -p site/preview
+          cp -a stable/dist/. site/
+          cp -a preview-src/dist/. site/preview/
+          test -f site/index.html
+          test -f site/preview/index.html
+          test -f site/preview/manifest.webmanifest
+          test -f site/preview/sw.js
+          test ! -f site/sw.js
+      - name: 保存預覽建置檔
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: ui-smoke-failure
-          path: |
-            /tmp/hanmo-v021-failure.png
-            /tmp/hanmo-v022-failure.png
-            /tmp/hanmo-v023-failure.png
-          if-no-files-found: ignore
+          name: hanmo-preview-site
+          path: preview-src/dist
+          retention-days: 14
       - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
-          path: dist
+          path: site
+
   deploy:
+    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: 發布
+      - name: 原站根目錄＋預覽子目錄同步發布
         id: deployment
         uses: actions/deploy-pages@v4
