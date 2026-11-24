@@ -35,6 +35,8 @@ const path = require("node:path");
       "browser-v021.cjs",
       "browser-v022.cjs",
       "browser-v023.cjs",
+      "browser-v030.cjs",
+      "browser-pwa.cjs",
     ]) {
       const child = spawn(process.execPath, [path.join(__dirname, script)], {
         stdio: "inherit",

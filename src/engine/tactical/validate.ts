@@ -1,3 +1,5 @@
+import { live, playerSide } from "./control";
+import { B } from "../balance";
 import type { GameState } from "../types";
 import type { TacticalState } from "./types";
 import { createBattle } from "./createBattle";
@@ -33,7 +35,7 @@ export function validTactical(
     !c ||
     !t ||
     !o ||
-    c.ownerId !== s.playerId ||
+    (playerSide(b) === "attacker" ? c.ownerId : t.ownerId) !== s.playerId ||
     c.ownerId !== b.attackerId ||
     t.ownerId !== b.defenderId ||
     t.ownerId === c.ownerId ||
@@ -57,9 +59,73 @@ export function validTactical(
   )
     return false;
   const expected = createBattle(
-    { ...s, seed: b.id },
-    { cityId: c.id, targetId: t.id, officerId: o.id, troops: b.sent },
+    { ...s, seed: b.id, version: b.officerIds ? 3 : 2 },
+    {
+      cityId: c.id,
+      targetId: t.id,
+      officerId: o.id,
+      troops: b.sent,
+      officerIds: b.officerIds,
+    },
   );
+  if (
+    b.playerSide !== undefined &&
+    !["attacker", "defender"].includes(b.playerSide)
+  )
+    return false;
+  if (s.version === 3 && s.scenarioId !== "legacy" && !b.officerIds)
+    return false;
+  if (
+    b.officerIds &&
+    (b.officerIds.length < 1 ||
+      b.officerIds.length > 3 ||
+      new Set(b.officerIds).size !== b.officerIds.length ||
+      !b.officerIds.includes(b.commanderId) ||
+      !b.officerIds.every((id) =>
+        s.officers.some(
+          (o) =>
+            o.id === id &&
+            o.cityId === c.id &&
+            o.factionId === c.ownerId &&
+            o.acted,
+        ),
+      ))
+  )
+    return false;
+  if (b.reinforcements !== undefined) {
+    if (
+      !Array.isArray(b.reinforcements) ||
+      b.reinforcements.length > 2 ||
+      playerSide(b) !== "defender" ||
+      !int(b.defenderGarrison, 0, b.defendersInitial)
+    )
+      return false;
+    const seen = new Set<string>();
+    let total = b.defenderGarrison!;
+    for (const r of b.reinforcements) {
+      const home = s.cities.find((c) => c.id === r.cityId),
+        chief = s.officers.find((o) => o.id === r.officerId);
+      if (
+        !home ||
+        home.ownerId !== s.playerId ||
+        !t.neighbors.includes(home.id) ||
+        seen.has(home.id) ||
+        !chief ||
+        chief.cityId !== t.id ||
+        chief.factionId !== s.playerId ||
+        !chief.acted ||
+        home.actions >= 3 ||
+        home.troops < 500 ||
+        !int(r.troops, 1, B.maxResource) ||
+        home.troops + r.troops > B.maxResource ||
+        r.food !== Math.ceil(r.troops * B.foodPerTroop)
+      )
+        return false;
+      seen.add(home.id);
+      total += r.troops;
+    }
+    if (total !== b.defendersInitial) return false;
+  }
   if (
     b.foodCost !== expected.foodCost ||
     b.defense !== expected.defense ||
@@ -85,6 +151,9 @@ export function validTactical(
       u.commanderId !== base.commanderId ||
       u.maxTroops !== base.maxTroops ||
       !int(u.troops, 0, u.maxTroops) ||
+      (u.morale !== undefined && !int(u.morale, 0, 100)) ||
+      (u.routed !== undefined && typeof u.routed !== "boolean") ||
+      (u.routed === true && (u.morale === undefined || u.morale > 20)) ||
       !inside(u.x, u.y) ||
       typeof u.moved !== "boolean" ||
       typeof u.attacked !== "boolean" ||
@@ -93,7 +162,7 @@ export function validTactical(
       !u.effects.every((e) => e === "guarded")
     )
       return false;
-    if (u.troops > 0) {
+    if (live(u)) {
       const key = `${u.x},${u.y}`;
       if (positions.has(key)) return false;
       positions.add(key);
@@ -115,10 +184,10 @@ export function validTactical(
   )
     return false;
   const attackers = b.units
-      .filter((u) => u.side === "attacker")
+      .filter((u) => u.side === "attacker" && live(u))
       .reduce((n, u) => n + u.troops, 0),
     defenders = b.units
-      .filter((u) => u.side === "defender")
+      .filter((u) => u.side === "defender" && live(u))
       .reduce((n, u) => n + u.troops, 0);
   if (!validCombatFeedback(b)) return false;
   if (b.status === "active")
@@ -126,23 +195,24 @@ export function validTactical(
   if (b.status === "attackerWon")
     return (
       attackers > 0 &&
-      ((b.reason === "elimination" && defenders === 0) ||
+      (((b.reason === "elimination" || b.reason === "morale") &&
+        defenders === 0) ||
         (b.reason === "occupation" &&
           b.occupation === T.occupationTurns &&
           b.gate.hp === 0 &&
           b.units.some(
-            (u) =>
-              u.side === "attacker" && u.troops > 0 && u.x === 7 && u.y === 2,
+            (u) => u.side === "attacker" && live(u) && u.x === 7 && u.y === 2,
           ) &&
           !b.units.some(
             (u) =>
               u.side === "defender" &&
-              u.troops > 0 &&
+              live(u) &&
               distance(u, { x: 7, y: 2 }) <= 1,
           )))
     );
   return (
-    (b.reason === "elimination" && attackers === 0) ||
+    ((b.reason === "elimination" || b.reason === "morale") &&
+      attackers === 0) ||
     b.reason === "retreat" ||
     (b.reason === "limit" && b.turn === T.maxTurns)
   );

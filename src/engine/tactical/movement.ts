@@ -1,3 +1,4 @@
+import { live } from "./control";
 import type { TacticalState, Unit } from "./types";
 import { T } from "./tacticalBalance";
 export const distance = (
@@ -20,7 +21,7 @@ export function reachable(
   b: TacticalState,
   u: Unit,
 ): { x: number; y: number; cost: number }[] {
-  if (u.troops <= 0 || u.moved || u.attacked) return [];
+  if (!live(u) || u.moved || u.attacked) return [];
   const queue = [{ x: u.x, y: u.y, cost: 0 }],
     best = new Map([[`${u.x},${u.y}`, 0]]);
   while (queue.length) {
@@ -36,9 +37,7 @@ export function reachable(
         y = p.y + dy;
       if (!inside(x, y)) continue;
       if (
-        b.units.some(
-          (v) => v.troops > 0 && v.id !== u.id && v.x === x && v.y === y,
-        )
+        b.units.some((v) => live(v) && v.id !== u.id && v.x === x && v.y === y)
       )
         continue;
       if (u.side === "attacker" && x >= 6 && b.gate.hp > 0) continue;

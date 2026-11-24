@@ -1166,7 +1166,10 @@ footer {
   color: #cfbf87;
 }
 .unit-banner {
-  font-size: 20px;
+  font-size: 16px;
+  line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
   position: relative;
   z-index: 1;
 }
@@ -2164,3 +2167,179 @@ footer {
   max-height: none;
   overflow: visible;
 }
+/* V0.3.0 core systems retain the four-pane mobile shell. */
+.scenario-select {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+.scenario-select select {
+  min-height: 44px;
+  width: 100%;
+}
+.faction-cards {
+  max-height: 50dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 3px;
+}
+.world-search {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 8px;
+  background: #182c23;
+}
+.world-search select:last-child {
+  grid-column: 1/-1;
+}
+.world-search input,
+.world-search select {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+}
+.world-expanded .map-scroll svg {
+  min-width: 1100px;
+}
+.world-expanded .city-name {
+  font-size: 15px;
+}
+.world-expanded .city-count {
+  display: none;
+}
+.city-dim {
+  opacity: 0.25;
+}
+.system-panel {
+  background: #1c3027;
+  border: 1px solid #74724c;
+  padding: 8px 10px;
+  margin: 8px 0;
+}
+.system-panel > summary {
+  cursor: pointer;
+  min-height: 44px;
+  color: var(--gold);
+}
+.system-panel label,
+.defense-council label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+.system-panel select,
+.system-panel input,
+.defense-council select,
+.defense-council input {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+}
+.system-feedback {
+  min-height: 60px;
+  max-height: 90px;
+  overflow: auto;
+  margin: 8px 0;
+  padding: 6px;
+  background: #344732;
+  font-size: 12px;
+}
+.faction-relations {
+  max-height: 170px;
+  overflow: auto;
+  font-size: 12px;
+}
+.roster-search {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  background: #14271e;
+}
+.roster-search input {
+  min-height: 44px;
+  width: 100%;
+}
+.officer-traits {
+  display: block;
+  font-size: 10px;
+  color: #aabd98;
+}
+.army-roster > div {
+  max-height: 160px;
+  overflow: auto;
+}
+.army-roster label {
+  min-height: 44px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.army-roster input {
+  width: 20px;
+  height: 20px;
+}
+.battle-cell.player-ally {
+  color: #bad6a3;
+  border-color: #7c9d61;
+}
+.battle-cell.player-enemy {
+  color: #e5a58b;
+  border-color: #9f6250;
+}
+.defense-council details > summary {
+  min-height: 44px;
+  cursor: pointer;
+}
+.defense-council .button-row {
+  margin-top: 12px;
+}
+@media (max-width: 760px) {
+  .faction-cards {
+    max-height: 45dvh;
+  }
+  .world-expanded .city-hit {
+    r: 30px;
+  }
+  .defense-council {
+    padding: 18px 14px;
+  }
+  .defense-council h2 {
+    font-size: 22px;
+  }
+}
+.desktop-strategy-nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.desktop-strategy-nav [aria-pressed="true"] {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+@media (min-width: 761px) and (min-height: 501px), (min-width: 1001px) {
+  .campaign[data-tab="officers"] .officers-pane {
+    display: block;
+    padding: 16px;
+  }
+  .campaign[data-tab="officers"] .strategy-layout,
+  .campaign[data-tab="officers"] .event-panel,
+  .campaign[data-tab="intel"] .strategy-layout {
+    display: none;
+  }
+}
+
+/* PWA standalone safe areas, update notice, save tools */
+@media (display-mode: standalone) { body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); } }
+.pwa-update { position:sticky; bottom:0; z-index:30; display:flex; justify-content:space-between; align-items:center; gap:.7rem; padding: .7rem 1rem; background:#213a30; border-top:1px solid #cba665; color:#e3ca91; }
+.pwa-update button { min-height:44px; flex-shrink:0; }
+.save-tools { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin:1rem 0; }
+.save-tools label, .recovery-options label { display:flex; flex-direction:column; gap:.2rem; font-size:.9rem; }
+.save-tools input[type=file], .recovery-options input[type=file] { max-width:230px; }

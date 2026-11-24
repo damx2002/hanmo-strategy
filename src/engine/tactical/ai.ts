@@ -1,3 +1,4 @@
+import { live } from "./control";
 import type { TacticalState, Side } from "./types";
 import { tacticalDispatch } from "./actions";
 import {
@@ -23,14 +24,14 @@ export function runTacticalPhase(
     return e.damage - e.retaliation * T.aiCounterRisk;
   };
   const ids = b.units
-    .filter((u) => u.side === side && u.troops > 0)
+    .filter((u) => u.side === side && live(u))
     .map((u) => u.id);
   for (const id of ids) {
     if (b.status !== "active") break;
     let u = b.units.find((u) => u.id === id)!;
-    if (u.troops <= 0 || u.attacked) continue;
+    if (!live(u) || u.attacked) continue;
     const candidates = [{ x: u.x, y: u.y, cost: 0 }, ...reachable(b, u)];
-    const foes = b.units.filter((v) => v.side !== side && v.troops > 0);
+    const foes = b.units.filter((v) => v.side !== side && live(v));
     function score(p: { x: number; y: number }) {
       const candidate = {
           ...u,
@@ -90,7 +91,7 @@ export function runTacticalPhase(
       if (r.ok) b = r.battle;
     }
     u = b.units.find((u) => u.id === id)!;
-    const targets = b.units.filter((v) => v.side !== side && v.troops > 0);
+    const targets = b.units.filter((v) => v.side !== side && live(v));
     const fire = targets
       .filter((v) => !fireReason(b, u, v))
       .sort(

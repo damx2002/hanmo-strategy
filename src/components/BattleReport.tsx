@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import type { Battle } from "../engine/types";
+import type { Battle, GameState } from "../engine/types";
 const n = (x: number) => x.toLocaleString("zh-TW");
 export function BattleReport({
   battle,
+  state,
   onClose,
 }: {
   battle: Battle;
+  state?: GameState;
   onClose: () => void;
 }) {
   const [animated, setAnimated] = useState(true);
@@ -46,7 +48,7 @@ export function BattleReport({
               <div>
                 <small>進攻戰力</small>
                 <b>{n(battle.attackPower)}</b>
-                <small>我軍傷亡</small>
+                <small>攻軍傷亡</small>
                 <b>{n(battle.attackLoss)}</b>
               </div>
               <div>
@@ -65,6 +67,17 @@ export function BattleReport({
                 守軍撤退／潰散 {n(battle.defenseRouted)} 人；已依剩餘領土結算。
               </p>
             )}
+            {battle.reinforcements?.map((r) => (
+              <p key={r.cityId}>
+                援軍：
+                {state?.cities.find((c) => c.id === r.cityId)?.name ?? r.cityId}{" "}
+                · {state?.officers.find((o) => o.id === r.officerId)?.name} ·
+                出兵{n(r.sent)}／傷亡{n(r.loss)}／生還{n(r.survivors)}，返回
+                {state?.cities.find((c) => c.id === r.returnedTo)?.name ??
+                  "無友城"}
+                ，散去{n(r.dispersed)}；耗糧{n(r.food)}。
+              </p>
+            ))}
             {battle.tacticalEvents && (
               <details>
                 <summary>戰術交戰明細</summary>

@@ -1,0 +1,954 @@
+{
+  "version": 2,
+  "pendingBattle": {
+    "id": 214023,
+    "sourceId": "hanzhong",
+    "targetId": "wan",
+    "commanderId": "liu-3",
+    "attackerId": "liu",
+    "defenderId": "cao",
+    "sent": 6000,
+    "defendersInitial": 12900,
+    "foodCost": 1320,
+    "training": {
+      "attacker": 63,
+      "defender": 76
+    },
+    "defense": 58,
+    "commanders": [
+      {
+        "id": "liu-3",
+        "leadership": 94,
+        "strength": 97,
+        "intelligence": 81
+      },
+      {
+        "id": "cao-4",
+        "leadership": 95,
+        "strength": 93,
+        "intelligence": 79
+      }
+    ],
+    "map": [
+      [
+        "plain",
+        "forest",
+        "plain",
+        "forest",
+        "forest",
+        "plain",
+        "city",
+        "city"
+      ],
+      [
+        "plain",
+        "plain",
+        "forest",
+        "plain",
+        "hill",
+        "plain",
+        "city",
+        "city"
+      ],
+      [
+        "plain",
+        "plain",
+        "plain",
+        "plain",
+        "plain",
+        "plain",
+        "gate",
+        "city"
+      ],
+      [
+        "plain",
+        "plain",
+        "hill",
+        "plain",
+        "plain",
+        "forest",
+        "city",
+        "city"
+      ],
+      [
+        "plain",
+        "plain",
+        "hill",
+        "plain",
+        "hill",
+        "forest",
+        "city",
+        "city"
+      ],
+      [
+        "plain",
+        "forest",
+        "plain",
+        "plain",
+        "plain",
+        "plain",
+        "city",
+        "city"
+      ]
+    ],
+    "units": [
+      {
+        "id": "attacker-0",
+        "side": "attacker",
+        "type": "infantry",
+        "commanderId": "liu-3",
+        "troops": 2000,
+        "maxTroops": 2000,
+        "x": 0,
+        "y": 2,
+        "moved": false,
+        "attacked": false,
+        "effects": []
+      },
+      {
+        "id": "attacker-1",
+        "side": "attacker",
+        "type": "cavalry",
+        "commanderId": "liu-3",
+        "troops": 2000,
+        "maxTroops": 2000,
+        "x": 0,
+        "y": 4,
+        "moved": false,
+        "attacked": false,
+        "effects": []
+      },
+      {
+        "id": "attacker-2",
+        "side": "attacker",
+        "type": "archer",
+        "commanderId": "liu-3",
+        "troops": 2000,
+        "maxTroops": 2000,
+        "x": 0,
+        "y": 1,
+        "moved": false,
+        "attacked": false,
+        "effects": []
+      },
+      {
+        "id": "defender-0",
+        "side": "defender",
+        "type": "infantry",
+        "commanderId": "cao-4",
+        "troops": 4300,
+        "maxTroops": 4300,
+        "x": 7,
+        "y": 2,
+        "moved": false,
+        "attacked": false,
+        "effects": []
+      },
+      {
+        "id": "defender-1",
+        "side": "defender",
+        "type": "cavalry",
+        "commanderId": "cao-4",
+        "troops": 4300,
+        "maxTroops": 4300,
+        "x": 7,
+        "y": 4,
+        "moved": false,
+        "attacked": false,
+        "effects": []
+      },
+      {
+        "id": "defender-2",
+        "side": "defender",
+        "type": "archer",
+        "commanderId": "cao-4",
+        "troops": 4300,
+        "maxTroops": 4300,
+        "x": 7,
+        "y": 1,
+        "moved": false,
+        "attacked": false,
+        "effects": []
+      }
+    ],
+    "seed": 3542887794,
+    "turn": 1,
+    "phase": "attacker",
+    "gate": {
+      "x": 6,
+      "y": 2,
+      "hp": 1776,
+      "maxHp": 1776
+    },
+    "fireUsed": {
+      "attacker": 0,
+      "defender": 0
+    },
+    "occupation": 0,
+    "status": "active",
+    "reason": null,
+    "events": [
+      "戰場布陣完畢。攻破城門後，須在內城無鄰敵駐守兩個攻方階段；或全滅守軍。"
+    ],
+    "effect": null
+  },
+  "year": 214,
+  "month": 2,
+  "turn": 1,
+  "playerId": "liu",
+  "cities": [
+    {
+      "id": "ye",
+      "name": "鄴",
+      "ownerId": "cao",
+      "x": 520,
+      "y": 108,
+      "neighbors": [
+        "puyang",
+        "luoyang"
+      ],
+      "gold": 2765,
+      "food": 11340,
+      "troops": 7410,
+      "agriculture": 48,
+      "commerce": 42,
+      "security": 75,
+      "training": 60,
+      "defense": 38,
+      "actions": 3
+    },
+    {
+      "id": "puyang",
+      "name": "濮陽",
+      "ownerId": "cao",
+      "x": 625,
+      "y": 200,
+      "neighbors": [
+        "ye",
+        "xuchang"
+      ],
+      "gold": 3584,
+      "food": 14446,
+      "troops": 6700,
+      "agriculture": 70,
+      "commerce": 51,
+      "security": 82,
+      "training": 66,
+      "defense": 43,
+      "actions": 3
+    },
+    {
+      "id": "xuchang",
+      "name": "許昌",
+      "ownerId": "cao",
+      "x": 550,
+      "y": 294,
+      "neighbors": [
+        "puyang",
+        "luoyang",
+        "wan"
+      ],
+      "gold": 4188,
+      "food": 10688,
+      "troops": 5550,
+      "agriculture": 62,
+      "commerce": 60,
+      "security": 83,
+      "training": 54,
+      "defense": 48,
+      "actions": 3
+    },
+    {
+      "id": "luoyang",
+      "name": "洛陽",
+      "ownerId": "cao",
+      "x": 415,
+      "y": 215,
+      "neighbors": [
+        "ye",
+        "xuchang",
+        "wan"
+      ],
+      "gold": 4805,
+      "food": 8923,
+      "troops": 4510,
+      "agriculture": 69,
+      "commerce": 69,
+      "security": 87,
+      "training": 57,
+      "defense": 53,
+      "actions": 3
+    },
+    {
+      "id": "wan",
+      "name": "宛",
+      "ownerId": "cao",
+      "x": 420,
+      "y": 344,
+      "neighbors": [
+        "xuchang",
+        "luoyang",
+        "xiangyang",
+        "hanzhong"
+      ],
+      "gold": 3017,
+      "food": 21523,
+      "troops": 12900,
+      "agriculture": 63,
+      "commerce": 46,
+      "security": 78,
+      "training": 76,
+      "defense": 58,
+      "actions": 3
+    },
+    {
+      "id": "hanzhong",
+      "name": "漢中",
+      "ownerId": "liu",
+      "x": 265,
+      "y": 345,
+      "neighbors": [
+        "wan",
+        "xiangyang",
+        "chengdu"
+      ],
+      "gold": 4079,
+      "food": 14186,
+      "troops": 1700,
+      "agriculture": 58,
+      "commerce": 55,
+      "security": 82,
+      "training": 63,
+      "defense": 63,
+      "actions": 2
+    },
+    {
+      "id": "chengdu",
+      "name": "成都",
+      "ownerId": "liu",
+      "x": 160,
+      "y": 480,
+      "neighbors": [
+        "hanzhong",
+        "jiangzhou"
+      ],
+      "gold": 4126,
+      "food": 13710,
+      "troops": 6500,
+      "agriculture": 94,
+      "commerce": 80,
+      "security": 86,
+      "training": 66,
+      "defense": 38,
+      "actions": 3
+    },
+    {
+      "id": "jiangzhou",
+      "name": "江州",
+      "ownerId": "liu",
+      "x": 320,
+      "y": 520,
+      "neighbors": [
+        "chengdu",
+        "chaisang"
+      ],
+      "gold": 5313,
+      "food": 14468,
+      "troops": 7100,
+      "agriculture": 72,
+      "commerce": 73,
+      "security": 90,
+      "training": 69,
+      "defense": 43,
+      "actions": 3
+    },
+    {
+      "id": "xiangyang",
+      "name": "襄陽",
+      "ownerId": "liu",
+      "x": 475,
+      "y": 440,
+      "neighbors": [
+        "wan",
+        "hanzhong",
+        "chaisang"
+      ],
+      "gold": 3511,
+      "food": 15366,
+      "troops": 7700,
+      "agriculture": 54,
+      "commerce": 50,
+      "security": 78,
+      "training": 48,
+      "defense": 48,
+      "actions": 3
+    },
+    {
+      "id": "chaisang",
+      "name": "柴桑",
+      "ownerId": "sun",
+      "x": 650,
+      "y": 510,
+      "neighbors": [
+        "xiangyang",
+        "jiangzhou",
+        "jianye"
+      ],
+      "gold": 3424,
+      "food": 19283,
+      "troops": 13450,
+      "agriculture": 85,
+      "commerce": 59,
+      "security": 82,
+      "training": 67,
+      "defense": 53,
+      "actions": 3
+    },
+    {
+      "id": "jianye",
+      "name": "建業",
+      "ownerId": "sun",
+      "x": 800,
+      "y": 420,
+      "neighbors": [
+        "chaisang",
+        "kuaiji"
+      ],
+      "gold": 4278,
+      "food": 7318,
+      "troops": 4080,
+      "agriculture": 68,
+      "commerce": 68,
+      "security": 83,
+      "training": 54,
+      "defense": 58,
+      "actions": 3
+    },
+    {
+      "id": "kuaiji",
+      "name": "會稽",
+      "ownerId": "sun",
+      "x": 868,
+      "y": 565,
+      "neighbors": [
+        "jianye"
+      ],
+      "gold": 4291,
+      "food": 15770,
+      "troops": 9000,
+      "agriculture": 70,
+      "commerce": 45,
+      "security": 90,
+      "training": 73,
+      "defense": 63,
+      "actions": 3
+    }
+  ],
+  "officers": [
+    {
+      "id": "cao-0",
+      "name": "曹操",
+      "factionId": "cao",
+      "cityId": "ye",
+      "leadership": 92,
+      "strength": 73,
+      "intelligence": 90,
+      "politics": 94,
+      "charm": 91,
+      "acted": false
+    },
+    {
+      "id": "cao-1",
+      "name": "夏侯惇",
+      "factionId": "cao",
+      "cityId": "puyang",
+      "leadership": 85,
+      "strength": 91,
+      "intelligence": 61,
+      "politics": 58,
+      "charm": 77,
+      "acted": false
+    },
+    {
+      "id": "cao-2",
+      "name": "夏侯淵",
+      "factionId": "cao",
+      "cityId": "wan",
+      "leadership": 87,
+      "strength": 89,
+      "intelligence": 63,
+      "politics": 52,
+      "charm": 72,
+      "acted": false
+    },
+    {
+      "id": "cao-3",
+      "name": "曹仁",
+      "factionId": "cao",
+      "cityId": "wan",
+      "leadership": 91,
+      "strength": 84,
+      "intelligence": 72,
+      "politics": 61,
+      "charm": 76,
+      "acted": false
+    },
+    {
+      "id": "cao-4",
+      "name": "張遼",
+      "factionId": "cao",
+      "cityId": "wan",
+      "leadership": 95,
+      "strength": 93,
+      "intelligence": 79,
+      "politics": 62,
+      "charm": 85,
+      "acted": false
+    },
+    {
+      "id": "cao-5",
+      "name": "許褚",
+      "factionId": "cao",
+      "cityId": "luoyang",
+      "leadership": 72,
+      "strength": 98,
+      "intelligence": 35,
+      "politics": 31,
+      "charm": 66,
+      "acted": false
+    },
+    {
+      "id": "cao-6",
+      "name": "郭嘉",
+      "factionId": "cao",
+      "cityId": "xuchang",
+      "leadership": 78,
+      "strength": 29,
+      "intelligence": 98,
+      "politics": 85,
+      "charm": 80,
+      "acted": false
+    },
+    {
+      "id": "cao-7",
+      "name": "荀彧",
+      "factionId": "cao",
+      "cityId": "ye",
+      "leadership": 65,
+      "strength": 24,
+      "intelligence": 95,
+      "politics": 99,
+      "charm": 89,
+      "acted": false
+    },
+    {
+      "id": "cao-8",
+      "name": "程昱",
+      "factionId": "cao",
+      "cityId": "puyang",
+      "leadership": 76,
+      "strength": 48,
+      "intelligence": 91,
+      "politics": 87,
+      "charm": 70,
+      "acted": false
+    },
+    {
+      "id": "cao-9",
+      "name": "司馬懿",
+      "factionId": "cao",
+      "cityId": "wan",
+      "leadership": 92,
+      "strength": 55,
+      "intelligence": 97,
+      "politics": 93,
+      "charm": 78,
+      "acted": false
+    },
+    {
+      "id": "liu-0",
+      "name": "劉備",
+      "factionId": "liu",
+      "cityId": "chengdu",
+      "leadership": 83,
+      "strength": 77,
+      "intelligence": 78,
+      "politics": 88,
+      "charm": 99,
+      "acted": false
+    },
+    {
+      "id": "liu-1",
+      "name": "關羽",
+      "factionId": "liu",
+      "cityId": "xiangyang",
+      "leadership": 95,
+      "strength": 98,
+      "intelligence": 77,
+      "politics": 70,
+      "charm": 94,
+      "acted": false
+    },
+    {
+      "id": "liu-2",
+      "name": "張飛",
+      "factionId": "liu",
+      "cityId": "jiangzhou",
+      "leadership": 87,
+      "strength": 99,
+      "intelligence": 44,
+      "politics": 38,
+      "charm": 63,
+      "acted": false
+    },
+    {
+      "id": "liu-3",
+      "name": "趙雲",
+      "factionId": "liu",
+      "cityId": "hanzhong",
+      "leadership": 94,
+      "strength": 97,
+      "intelligence": 81,
+      "politics": 73,
+      "charm": 91,
+      "acted": true
+    },
+    {
+      "id": "liu-4",
+      "name": "諸葛亮",
+      "factionId": "liu",
+      "cityId": "chengdu",
+      "leadership": 93,
+      "strength": 32,
+      "intelligence": 100,
+      "politics": 98,
+      "charm": 95,
+      "acted": false
+    },
+    {
+      "id": "liu-5",
+      "name": "龐統",
+      "factionId": "liu",
+      "cityId": "hanzhong",
+      "leadership": 87,
+      "strength": 29,
+      "intelligence": 98,
+      "politics": 90,
+      "charm": 72,
+      "acted": false
+    },
+    {
+      "id": "liu-6",
+      "name": "黃忠",
+      "factionId": "liu",
+      "cityId": "xiangyang",
+      "leadership": 88,
+      "strength": 94,
+      "intelligence": 65,
+      "politics": 52,
+      "charm": 79,
+      "acted": false
+    },
+    {
+      "id": "liu-7",
+      "name": "馬超",
+      "factionId": "liu",
+      "cityId": "jiangzhou",
+      "leadership": 86,
+      "strength": 98,
+      "intelligence": 50,
+      "politics": 43,
+      "charm": 87,
+      "acted": false
+    },
+    {
+      "id": "liu-8",
+      "name": "魏延",
+      "factionId": "liu",
+      "cityId": "hanzhong",
+      "leadership": 89,
+      "strength": 94,
+      "intelligence": 70,
+      "politics": 49,
+      "charm": 62,
+      "acted": false
+    },
+    {
+      "id": "liu-9",
+      "name": "法正",
+      "factionId": "liu",
+      "cityId": "chengdu",
+      "leadership": 75,
+      "strength": 26,
+      "intelligence": 95,
+      "politics": 91,
+      "charm": 67,
+      "acted": false
+    },
+    {
+      "id": "sun-0",
+      "name": "孫權",
+      "factionId": "sun",
+      "cityId": "chaisang",
+      "leadership": 83,
+      "strength": 65,
+      "intelligence": 84,
+      "politics": 94,
+      "charm": 95,
+      "acted": false
+    },
+    {
+      "id": "sun-1",
+      "name": "周瑜",
+      "factionId": "sun",
+      "cityId": "chaisang",
+      "leadership": 98,
+      "strength": 75,
+      "intelligence": 96,
+      "politics": 88,
+      "charm": 96,
+      "acted": false
+    },
+    {
+      "id": "sun-2",
+      "name": "魯肅",
+      "factionId": "sun",
+      "cityId": "jianye",
+      "leadership": 83,
+      "strength": 47,
+      "intelligence": 93,
+      "politics": 96,
+      "charm": 93,
+      "acted": false
+    },
+    {
+      "id": "sun-3",
+      "name": "呂蒙",
+      "factionId": "sun",
+      "cityId": "chaisang",
+      "leadership": 94,
+      "strength": 86,
+      "intelligence": 91,
+      "politics": 79,
+      "charm": 82,
+      "acted": false
+    },
+    {
+      "id": "sun-4",
+      "name": "陸遜",
+      "factionId": "sun",
+      "cityId": "kuaiji",
+      "leadership": 97,
+      "strength": 62,
+      "intelligence": 98,
+      "politics": 92,
+      "charm": 87,
+      "acted": false
+    },
+    {
+      "id": "sun-5",
+      "name": "甘寧",
+      "factionId": "sun",
+      "cityId": "chaisang",
+      "leadership": 89,
+      "strength": 97,
+      "intelligence": 74,
+      "politics": 40,
+      "charm": 70,
+      "acted": false
+    },
+    {
+      "id": "sun-6",
+      "name": "太史慈",
+      "factionId": "sun",
+      "cityId": "kuaiji",
+      "leadership": 88,
+      "strength": 97,
+      "intelligence": 67,
+      "politics": 54,
+      "charm": 84,
+      "acted": false
+    },
+    {
+      "id": "sun-7",
+      "name": "黃蓋",
+      "factionId": "sun",
+      "cityId": "chaisang",
+      "leadership": 86,
+      "strength": 87,
+      "intelligence": 76,
+      "politics": 62,
+      "charm": 86,
+      "acted": false
+    },
+    {
+      "id": "sun-8",
+      "name": "程普",
+      "factionId": "sun",
+      "cityId": "chaisang",
+      "leadership": 87,
+      "strength": 82,
+      "intelligence": 78,
+      "politics": 74,
+      "charm": 89,
+      "acted": false
+    },
+    {
+      "id": "sun-9",
+      "name": "周泰",
+      "factionId": "sun",
+      "cityId": "kuaiji",
+      "leadership": 80,
+      "strength": 96,
+      "intelligence": 46,
+      "politics": 39,
+      "charm": 73,
+      "acted": false
+    }
+  ],
+  "factions": [
+    {
+      "id": "cao",
+      "name": "曹操",
+      "color": "#6b9fca",
+      "motto": "挾天子以令諸侯",
+      "active": true
+    },
+    {
+      "id": "liu",
+      "name": "劉備",
+      "color": "#88b778",
+      "motto": "興復漢室，仁義立國",
+      "active": true
+    },
+    {
+      "id": "sun",
+      "name": "孫權",
+      "color": "#d47c67",
+      "motto": "據江東，圖天下",
+      "active": true
+    }
+  ],
+  "seed": 3542887794,
+  "events": [
+    "214年2月｜月結完成：商稅入庫、糧食入倉、軍糧支出已結算。各城指令與武將行動重置。",
+    "214年1月｜孫權軍於會稽執行開墾，由周泰主持。",
+    "214年1月｜孫權軍於會稽執行開墾，由太史慈主持。",
+    "214年1月｜孫權軍於會稽執行訓練，由陸遜主持。",
+    "214年1月｜孫權軍於建業執行徵兵，由魯肅主持。",
+    "214年1月｜孫權軍：孫權自建業調往柴桑，兵 1,950、糧 2,689。",
+    "214年1月｜孫權軍：程普自建業調往柴桑，兵 3,900、糧 4,033。",
+    "214年1月｜孫權軍於柴桑執行開墾，由甘寧主持。",
+    "214年1月｜孫權軍於柴桑執行開墾，由呂蒙主持。",
+    "214年1月｜孫權軍於柴桑執行訓練，由周瑜主持。",
+    "214年1月｜曹操軍於宛執行開墾，由曹仁主持。",
+    "214年1月｜曹操軍於宛執行訓練，由張遼主持。",
+    "214年1月｜曹操軍於洛陽執行徵兵，由許褚主持。",
+    "214年1月｜曹操軍：司馬懿自洛陽調往宛，兵 2,650、糧 3,500。",
+    "214年1月｜曹操軍於許昌執行徵兵，由郭嘉主持。",
+    "214年1月｜曹操軍：夏侯淵自許昌調往宛，兵 3,550、糧 4,566。",
+    "214年1月｜曹操軍於濮陽執行開墾，由程昱主持。",
+    "214年1月｜曹操軍於濮陽執行訓練，由夏侯惇主持。",
+    "214年1月｜曹操軍於鄴執行訓練，由荀彧主持。",
+    "214年1月｜曹操軍於鄴執行徵兵，由曹操主持。",
+    "214年1月｜劉備軍於成都執行開墾，由劉備主持。",
+    "214年1月｜劉備軍於成都執行開墾，由法正主持。",
+    "214年1月｜劉備軍於成都執行商業，由諸葛亮主持。",
+    "建安十九年，群雄對峙。請選擇城池，開創你的霸業。"
+  ],
+  "battles": [],
+  "status": "playing",
+  "delegation": {
+    "policies": {
+      "chengdu": "economy"
+    },
+    "processedTurn": 0,
+    "report": {
+      "turn": 0,
+      "year": 214,
+      "month": 1,
+      "cities": [
+        {
+          "cityId": "chengdu",
+          "name": "成都",
+          "policy": "economy",
+          "actions": [
+            {
+              "type": "trade",
+              "officerId": "liu-4",
+              "officerName": "諸葛亮",
+              "before": 64,
+              "after": 80,
+              "gold": 250,
+              "food": 0
+            },
+            {
+              "type": "farm",
+              "officerId": "liu-9",
+              "officerName": "法正",
+              "before": 65,
+              "after": 80,
+              "gold": 250,
+              "food": 0
+            },
+            {
+              "type": "farm",
+              "officerId": "liu-0",
+              "officerName": "劉備",
+              "before": 80,
+              "after": 94,
+              "gold": 250,
+              "food": 0
+            }
+          ],
+          "gold": 750,
+          "food": 0,
+          "reason": "本月指令已用盡"
+        }
+      ],
+      "eventLines": [
+        "214年1月｜劉備軍於成都執行商業，由諸葛亮主持。",
+        "214年1月｜劉備軍於成都執行開墾，由法正主持。",
+        "214年1月｜劉備軍於成都執行開墾，由劉備主持。"
+      ],
+      "economy": [
+        {
+          "cityId": "hanzhong",
+          "name": "漢中",
+          "gold": 779,
+          "food": 2730,
+          "upkeep": 924,
+          "netFood": 1806,
+          "deserters": 0
+        },
+        {
+          "cityId": "chengdu",
+          "name": "成都",
+          "gold": 1076,
+          "food": 3990,
+          "upkeep": 780,
+          "netFood": 3210,
+          "deserters": 0
+        },
+        {
+          "cityId": "jiangzhou",
+          "name": "江州",
+          "gold": 1013,
+          "food": 3220,
+          "upkeep": 852,
+          "netFood": 2368,
+          "deserters": 0
+        },
+        {
+          "cityId": "xiangyang",
+          "name": "襄陽",
+          "gold": 711,
+          "food": 2590,
+          "upkeep": 924,
+          "netFood": 1666,
+          "deserters": 0
+        }
+      ]
+    }
+  }
+}

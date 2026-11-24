@@ -1,3 +1,4 @@
+import { live, playerSide } from "./control";
 import type {
   TacticalAction,
   TacticalResult,
@@ -8,6 +9,7 @@ import { reachable, distance } from "./movement";
 import {
   canAttack,
   estimateExchange,
+  afterDamage,
   fireReason,
   fireChance,
   matchupMultiplier,
@@ -20,18 +22,22 @@ export function log(b: TacticalState, text: string) {
   b.events = b.events.slice(0, T.maxEvents);
 }
 export function checkBattle(b: TacticalState) {
-  if (!b.units.some((u) => u.side === "attacker" && u.troops > 0)) {
+  if (!b.units.some((u) => u.side === "attacker" && live(u))) {
     b.status = "defenderWon";
-    b.reason = "elimination";
-  } else if (!b.units.some((u) => u.side === "defender" && u.troops > 0)) {
+    b.reason = b.units.some((u) => u.routed && u.side === "attacker")
+      ? "morale"
+      : "elimination";
+  } else if (!b.units.some((u) => u.side === "defender" && live(u))) {
     b.status = "attackerWon";
-    b.reason = "elimination";
+    b.reason = b.units.some((u) => u.routed && u.side === "defender")
+      ? "morale"
+      : "elimination";
   }
 }
 export function tacticalDispatch(
   battle: TacticalState,
   a: TacticalAction,
-  actor: Side = "attacker",
+  actor: Side = playerSide(battle),
 ): TacticalResult {
   const fail = (error: string): TacticalResult => ({
     ok: false,
@@ -42,10 +48,12 @@ export function tacticalDispatch(
   if (actor !== battle.phase) return fail("現在不是你的行動階段。");
   const b = structuredClone(battle);
   if (a.type === "retreat") {
-    if (actor !== "attacker") return fail("守軍不能使用攻方撤退。");
-    b.status = "defenderWon";
+    b.status = actor === "attacker" ? "defenderWon" : "attackerWon";
     b.reason = "retreat";
-    log(b, "攻軍下令撤退，生還部隊將返回原城。");
+    log(
+      b,
+      `${actor === "attacker" ? "攻軍" : "守軍"}下令撤退，生還部隊戰後返回友城。`,
+    );
     return { ok: true, battle: b };
   }
   if (a.type === "endPhase") {
@@ -53,13 +61,12 @@ export function tacticalDispatch(
       const held =
         b.gate.hp === 0 &&
         b.units.some(
-          (u) =>
-            u.side === "attacker" && u.troops > 0 && u.x === 7 && u.y === 2,
+          (u) => u.side === "attacker" && live(u) && u.x === 7 && u.y === 2,
         ) &&
         !b.units.some(
           (u) =>
             u.side === "defender" &&
-            u.troops > 0 &&
+            live(u) &&
             distance(u, { x: 7, y: 2 }) <= 1,
         );
       b.occupation = held ? b.occupation + 1 : 0;
@@ -91,7 +98,7 @@ export function tacticalDispatch(
     return { ok: true, battle: b };
   }
   const u = b.units.find((u) => u.id === a.unitId);
-  if (!u || u.side !== actor || u.troops <= 0) return fail("無法指揮該部隊。");
+  if (!u || u.side !== actor || !live(u)) return fail("無法指揮該部隊。");
   let text = "";
   if (a.type === "move") {
     if (!reachable(b, u).some((p) => p.x === a.x && p.y === a.y))
@@ -144,7 +151,8 @@ export function tacticalDispatch(
       );
       const loss = exchange.damage;
       const before = v.troops;
-      v.troops -= loss;
+      Object.assign(v, afterDamage(v, loss));
+      describeRout(b, v);
       u.attacked = true;
       text = recordCombat(
         b,
@@ -158,7 +166,8 @@ export function tacticalDispatch(
       if (exchange.retaliation > 0) {
         const parent = b.feedbackSequence!;
         const ownBefore = u.troops;
-        u.troops -= exchange.retaliation;
+        Object.assign(u, afterDamage(u, exchange.retaliation));
+        describeRout(b, u);
         text +=
           " " +
           recordCombat(
@@ -185,7 +194,8 @@ export function tacticalDispatch(
           ? Math.min(v.troops, Math.ceil(v.troops * T.fireLoss))
           : 0;
       const before = v.troops;
-      v.troops -= loss;
+      Object.assign(v, afterDamage(v, loss));
+      describeRout(b, v);
       text = recordCombat(b, u, v, "fire", before, v.troops, 1, success);
     }
   }
@@ -193,4 +203,12 @@ export function tacticalDispatch(
   log(b, text);
   checkBattle(b);
   return { ok: true, battle: b };
+}
+
+function describeRout(b: TacticalState, u: import("./types").Unit) {
+  if (u.routed)
+    log(
+      b,
+      `${u.side === "attacker" ? "攻軍" : "守軍"}${troopNames[u.type]}士氣潰退，${u.troops}生還兵退出交戰，戰後依戰果回收。`,
+    );
 }

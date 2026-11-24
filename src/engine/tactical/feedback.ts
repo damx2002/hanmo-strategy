@@ -1,3 +1,4 @@
+import { live, playerSide } from "./control";
 import type { CombatFeedback, TacticalState, Unit } from "./types";
 import { T, troopNames } from "./tacticalBalance";
 import { matchupRelation } from "./damage";
@@ -15,9 +16,9 @@ export function recordCombat(
   const sequence = (b.feedbackSequence ?? 0) + 1;
   const casualties = before - after,
     relation = matchupRelation(multiplier);
-  const source = `${u.side === "attacker" ? "我軍" : "敵軍"}${troopNames[u.type]}`;
+  const source = `${u.side === playerSide(b) ? "我軍" : "敵軍"}${troopNames[u.type]}`;
   const recipient = target
-    ? `${target.side === "attacker" ? "我軍" : "敵軍"}${troopNames[target.type]}`
+    ? `${target.side === playerSide(b) ? "我軍" : "敵軍"}${troopNames[target.type]}`
     : "城門";
   const text =
     kind === "fire"
@@ -42,6 +43,7 @@ export function recordCombat(
     relation,
     success,
     destroyed: after === 0,
+    ...(target?.routed ? { routed: true } : {}),
     side: u.side,
     turn: b.turn,
     text,
@@ -55,11 +57,11 @@ export function recordCombat(
 // Selection changes only after the current unit is dead or has completed its action.
 export function nextTacticalUnit(b: TacticalState, preferred: string): string {
   const current = b.units.find(
-    (u) => u.id === preferred && u.side === "attacker" && u.troops > 0,
+    (u) => u.id === preferred && u.side === playerSide(b) && live(u),
   );
   if (current && !current.attacked) return current.id;
   return (
-    b.units.find((u) => u.side === "attacker" && u.troops > 0 && !u.attacked)
+    b.units.find((u) => u.side === playerSide(b) && live(u) && !u.attacked)
       ?.id ??
     current?.id ??
     ""
@@ -116,6 +118,8 @@ export function validCombatFeedback(b: TacticalState): boolean {
       f.after > f.before ||
       f.casualties !== f.before - f.after ||
       f.destroyed !== (f.after === 0) ||
+      (f.routed !== undefined &&
+        (typeof f.routed !== "boolean" || (f.routed && f.after === 0))) ||
       typeof f.success !== "boolean" ||
       typeof f.text !== "string" ||
       f.text.length > 500 ||

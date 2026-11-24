@@ -43,3 +43,7 @@ npm run build
 ## V0.2.3 重驗（2026-10-29）
 
 沒有新增專案依賴，lockfile只更新版本。實際npm ci、npm audit及npm audit --omit=dev均通過，完整與正式依賴0漏洞；157項測試、型別與建置通過，沿用playwright-core與CI系統Chrome。
+
+## V0.3.0 候選版重驗（2026-10-29）
+
+沒有新增／升級套件，package-lock只改應用版本至0.3.0。乾淨`npm ci --cache /tmp/hanmo-npm-cache`成功；實際`npm audit --json`與`npm audit --omit=dev --json`的info／low／moderate／high／critical全部0。React／React DOM為正式依賴，Vite／TypeScript／Vitest／playwright-core為開發工具；沒有使用audit fix --force。稽核結果只代表當日公告資料。

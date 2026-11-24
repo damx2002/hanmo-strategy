@@ -1,3 +1,4 @@
+import { playerSide } from "../../engine/tactical/control";
 import type { TacticalState, Unit } from "../../engine/tactical/types";
 import {
   canAttack,
@@ -17,14 +18,14 @@ export function CombatReadout({
   const list = battle.combatFeedback ?? [],
     last = list.at(-1);
   const previews =
-    battle.phase === "attacker" && mode === "attack" && selected
+    battle.phase === playerSide(battle) && mode === "attack" && selected
       ? battle.units.filter((v) => canAttack(battle, selected, v))
       : [];
-  const enemyPhase = (last?.phase ?? last?.side) === "defender";
+  const enemyPhase = !!last && (last.phase ?? last.side) !== playerSide(battle);
   const exchanges = last
     ? list.filter((f) =>
         enemyPhase
-          ? (f.phase ?? f.side) === "defender" && f.turn === last.turn
+          ? (f.phase ?? f.side) !== playerSide(battle) && f.turn === last.turn
           : f.sequence === last.sequence ||
             (last.kind === "retaliation" && f.sequence === last.parentSequence),
       )
@@ -68,7 +69,8 @@ export function CombatReadout({
         <>
           <strong className="enemy-round-title">
             {enemyPhase ? "敵軍回擊" : "本次接戰"} · 第 {last!.turn} 回合 · 我損{" "}
-            {total("attacker")}／敵損 {total("defender")}
+            {total(playerSide(battle))}／敵損{" "}
+            {total(playerSide(battle) === "attacker" ? "defender" : "attacker")}
           </strong>
           <ul className="enemy-results">
             {exchanges.map((f) => {
@@ -76,11 +78,11 @@ export function CombatReadout({
                 target = battle.units.find((u) => u.id === f.targetId);
               return (
                 <li key={f.sequence} data-feedback-seq={f.sequence}>
-                  {source.side === "attacker" ? "我軍" : "敵軍"}
+                  {source.side === playerSide(battle) ? "我軍" : "敵軍"}
                   {troopNames[source.type]}
                   {f.kind === "retaliation" ? "反擊" : "攻擊"} →{" "}
                   {target
-                    ? `${target.side === "attacker" ? "我軍" : "敵軍"}${troopNames[target.type]}`
+                    ? `${target.side === playerSide(battle) ? "我軍" : "敵軍"}${troopNames[target.type]}`
                     : "城門"}{" "}
                   −{f.casualties.toLocaleString("zh-TW")} ·{" "}
                   {f.kind === "fire"

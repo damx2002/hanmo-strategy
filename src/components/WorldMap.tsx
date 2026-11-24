@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { GameState } from "../engine/types";
-import { links } from "../data/scenario";
+
 // Voronoi half-plane clipping gives every city a territory that follows ownership.
 function territory(x: number, y: number, cities: GameState["cities"]) {
   let polygon = [
@@ -41,11 +41,58 @@ export function WorldMap({
   target?: string;
   onSelect: (id: string) => void;
 }) {
+  const [search, setSearch] = useState("");
+  const [owner, setOwner] = useState("");
+  const links = state.cities.flatMap((c) =>
+    c.neighbors.filter((id) => c.id < id).map((id) => [c.id, id]),
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const source = state.cities.find((c) => c.id === selected)!;
   return (
-    <section className="map-frame">
+    <section
+      className={`map-frame ${state.cities.length > 12 ? "world-expanded" : ""}`}
+    >
+      <div className="world-search">
+        <input
+          aria-label="搜尋城池"
+          placeholder="搜尋城池"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select
+          aria-label="勢力篩選"
+          value={owner}
+          onChange={(e) => setOwner(e.target.value)}
+        >
+          <option value="">全部勢力</option>
+          {state.factions
+            .filter((f) => f.active)
+            .map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+        </select>
+        <select
+          aria-label="快速選城"
+          value={selected}
+          onChange={(e) => onSelect(e.target.value)}
+        >
+          {state.cities
+            .filter(
+              (c) =>
+                (!search || c.name.includes(search)) &&
+                (!owner || c.ownerId === owner),
+            )
+            .map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} ·{" "}
+                {state.factions.find((f) => f.id === c.ownerId)?.name}
+              </option>
+            ))}
+        </select>
+      </div>
       <div className="map-heading">
         <span>
           九州輿圖 <small>群雄對峙 · 架空歷史</small>
@@ -84,8 +131,8 @@ export function WorldMap({
         aria-label="地圖捲動區，可左右上下捲動"
       >
         <svg
-          viewBox="0 0 1000 690"
-          style={{ width: `max(${zoom * 100}%, ${zoom * 720}px)` }}
+          viewBox={`0 0 1000 ${state.cities.length > 12 ? 730 : 690}`}
+          style={{ width: `max(${zoom * 100}%, ${zoom * (state.cities.length > 12 ? 1100 : 720)}px)` }}
           role="group"
           aria-label="十二城戰略地圖，可使用 Tab 選擇城池"
         >
@@ -201,7 +248,7 @@ export function WorldMap({
                     onSelect(c.id);
                   }
                 }}
-                className={`city ${selected === c.id ? "selected" : ""} ${attackable ? "attackable" : ""} ${target === c.id ? "target" : ""}`}
+                className={`city ${owner && c.ownerId !== owner ? "city-dim" : ""} ${search && !c.name.includes(search) ? "city-dim" : ""} ${selected === c.id ? "selected" : ""} ${attackable ? "attackable" : ""} ${target === c.id ? "target" : ""}`}
                 transform={`translate(${c.x} ${c.y})`}
                 style={{ color }}
               >
@@ -225,7 +272,9 @@ export function WorldMap({
                   {c.name}
                 </text>
                 <text y="56" textAnchor="middle" className="city-count">
-                  {(c.troops / 1000).toFixed(1)} 千兵
+                  {state.cities.length > 12
+                    ? ""
+                    : `${(c.troops / 1000).toFixed(1)} 千兵`}
                 </text>
               </g>
             );

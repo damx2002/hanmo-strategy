@@ -1,3 +1,4 @@
+import { playerSide, live } from "../../engine/tactical/control";
 import { CombatReadout } from "./CombatReadout";
 import { useState } from "react";
 import type {
@@ -67,7 +68,7 @@ export function TacticalMap({
           {battle.map.flatMap((row, y) =>
             row.map((terrain, x) => {
               const unit = battle.units.find(
-                  (u) => u.troops > 0 && u.x === x && u.y === y,
+                  (u) => live(u) && u.x === x && u.y === y,
                 ),
                 move = moves.some((p) => p.x === x && p.y === y);
               const target =
@@ -108,8 +109,8 @@ export function TacticalMap({
                   key={`${x}-${y}`}
                   data-x={x}
                   data-y={y}
-                  className={`battle-cell ${x === 7 && y === 2 ? "cell-keep" : ""} terrain-${terrain} ${unit ? `side-${unit.side}` : ""} ${selected?.id === unit?.id && unit ? "unit-selected" : ""} ${unit?.attacked ? "unit-acted" : ""} ${move ? "cell-move" : ""} ${target ? "cell-target" : ""}`}
-                  aria-label={`${x + 1}列${y + 1}行 ${x === 7 && y === 2 ? "內城據點 " : ""}${terrainNames[terrain]}${unit ? ` ${unit.side === "attacker" ? "我軍" : "敵軍"}${troopNames[unit.type]} ${unit.troops.toLocaleString("zh-TW")}兵` : ""}${move ? " 可移動" : ""}${target ? " 可攻擊" : ""}`}
+                  className={`battle-cell ${x === 7 && y === 2 ? "cell-keep" : ""} terrain-${terrain} ${unit ? `side-${unit.side} ${unit.side === playerSide(battle) ? "player-ally" : "player-enemy"}` : ""} ${selected?.id === unit?.id && unit ? "unit-selected" : ""} ${unit?.attacked ? "unit-acted" : ""} ${move ? "cell-move" : ""} ${target ? "cell-target" : ""}`}
+                  aria-label={`${x + 1}列${y + 1}行 ${x === 7 && y === 2 ? "內城據點 " : ""}${terrainNames[terrain]}${unit ? ` ${unit.side === playerSide(battle) ? "我軍" : "敵軍"}${troopNames[unit.type]} ${unit.troops.toLocaleString("zh-TW")}兵` : ""}${move ? " 可移動" : ""}${target ? " 可攻擊" : ""}`}
                   data-target-id={unit?.id}
                   data-preview-min={preview?.min}
                   data-preview-max={preview?.max}
@@ -204,8 +205,14 @@ export function TacticalMap({
                           {hits.length > 1 ? "合計 " : ""}−
                           {loss.toLocaleString("zh-TW")}
                         </strong>
-                        {hit.destroyed && (
-                          <b>{hit.kind === "gate" ? "城門已破" : "部隊潰滅"}</b>
+                        {(hit.destroyed || hit.routed) && (
+                          <b>
+                            {hit.kind === "gate"
+                              ? "城門已破"
+                              : hit.routed
+                                ? "士氣潰退"
+                                : "部隊潰滅"}
+                          </b>
                         )}
                       </span>
                     </span>

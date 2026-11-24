@@ -13,9 +13,26 @@ export function checkResult(s: GameState): GameState {
         .filter((o) => o.factionId === f.id)
         .forEach((o) => {
           o.factionId = null;
-          o.cityId = null;
+          o.cityId =
+            next.version === 3 ? (o.cityId ?? next.cities[0].id) : null;
+          if (next.version === 3) {
+            o.discovered = false;
+            o.loyalty = 35;
+          }
         });
   });
+  for (const c of next.cities)
+    if (
+      c.governorId &&
+      !next.officers.some(
+        (o) =>
+          o.id === c.governorId &&
+          o.cityId === c.id &&
+          o.factionId === c.ownerId &&
+          !o.retired,
+      )
+    )
+      delete c.governorId;
   if (next.delegation) {
     for (const id of Object.keys(next.delegation.policies))
       if (!next.cities.some((c) => c.id === id && c.ownerId === next.playerId))

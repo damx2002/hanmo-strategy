@@ -14,12 +14,15 @@ export interface Unit {
   moved: boolean;
   attacked: boolean;
   effects: "guarded"[];
+  morale?: number;
+  routed?: boolean;
 }
 export interface Commander {
   id: string;
   leadership: number;
   strength: number;
   intelligence: number;
+  traits?: string[];
 }
 export interface CombatFeedback {
   sequence: number;
@@ -37,11 +40,17 @@ export interface CombatFeedback {
   relation: "advantage" | "disadvantage" | "neutral";
   success: boolean;
   destroyed: boolean;
+  routed?: boolean;
   side: Side;
   turn: number;
   text: string;
 }
 export interface TacticalState {
+  playerSide?: Side;
+  officerIds?: string[];
+  defenseId?: string;
+  defenderGarrison?: number;
+  reinforcements?: import("../resolution/types").Reinforcement[];
   feedbackSequence?: number;
   combatFeedback?: CombatFeedback[];
   id: number;
@@ -65,7 +74,7 @@ export interface TacticalState {
   fireUsed: Record<Side, number>;
   occupation: number;
   status: "active" | "attackerWon" | "defenderWon";
-  reason: "elimination" | "occupation" | "retreat" | "limit" | null;
+  reason: "elimination" | "occupation" | "retreat" | "limit" | "morale" | null;
   events: string[];
   effect: {
     kind: "move" | "attack" | "fire" | "gate" | "wait";

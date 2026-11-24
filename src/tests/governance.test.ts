@@ -265,7 +265,7 @@ describe("武將連續操作", () => {
 describe("V0.1.0 原始存檔相容", () => {
   it("僅遷移 schema，完整保持日期、世界、事件、戰報與 seed", () => {
     const s = deserialize(JSON.stringify(legacy));
-    expect(SAVE_KEY).toBe("hanmo-strategy-save-v2");
+    expect(SAVE_KEY).toBe("hanmo-strategy-save-v3");
     expect(s.version).toBe(2);
     expect(s).toEqual({ ...legacy, version: 2, pendingBattle: null });
     expect(s.battles.length).toBeGreaterThan(0);

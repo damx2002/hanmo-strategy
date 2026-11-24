@@ -1,47 +1,17 @@
+import {
+  startMonthResolution,
+  advanceMonthResolution,
+} from "./resolution/month";
 import type { GameState } from "./types";
 import { runAI } from "./ai";
 import { executeDelegatedCities } from "./delegation/execute";
-import { income, settleCity } from "./economy";
-import { checkResult, event } from "./game";
+import { finishEconomy } from "./monthEconomy";
 export function endMonth(state: GameState): GameState {
+  if (state.version === 3)
+    return advanceMonthResolution(startMonthResolution(state), 500);
   if (state.status !== "playing" || state.pendingBattle) return state;
   let s = executeDelegatedCities(structuredClone(state));
   for (const f of s.factions)
     if (f.id !== s.playerId && f.active) s = runAI(s, f.id);
-  if (s.delegation?.report?.turn === s.turn) s.delegation.report.economy = [];
-  s.cities = s.cities.map((c) => {
-    const r = settleCity(c);
-    if (s.delegation?.report?.turn === s.turn && c.ownerId === s.playerId) {
-      const i = income(c);
-      (s.delegation.report.economy ??= []).push({
-        cityId: c.id,
-        name: c.name,
-        gold: r.city.gold - c.gold,
-        food: i.food,
-        upkeep: i.upkeep,
-        netFood: r.city.food - c.food,
-        deserters: r.deserters,
-      });
-    }
-    if (r.deserters)
-      event(
-        s,
-        `${c.name}缺糧，${r.deserters.toLocaleString("zh-TW")}名士兵逃散。`,
-      );
-    return r.city;
-  });
-  s.officers.forEach((o) => {
-    o.acted = false;
-  });
-  s.turn++;
-  s.month++;
-  if (s.month > 12) {
-    s.year++;
-    s.month = 1;
-  }
-  event(
-    s,
-    "月結完成：商稅入庫、糧食入倉、軍糧支出已結算。各城指令與武將行動重置。",
-  );
-  return checkResult(s);
+  return finishEconomy(s);
 }
