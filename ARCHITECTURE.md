@@ -93,4 +93,4 @@ AI先評估合法攻城；其次有限外交、搜尋／登用、任命與忠誠
 
 `scripts/browser-v021/v022/v023.cjs`保留原傷亡／手機／委任斷言，只調整V3key、明確legacy開局與遷移期望。`browser-v030.cjs`使用production產物實際操作人事／外交、兩次關閉Chrome、守方逐回合下令、援軍回收及月結續行；只用引擎建立前置場景、選合法目標和比對真值，沒有用fixture冒充戰果。四個尺寸為412×915、360×800、915×412、1440×1000。
 
-CI先npm ci、typecheck、tests、build與四套Chromium smoke，失敗留圖。分支及PR只上傳候選artifact，main才configure/upload/deploy Pages。Draft PR需玩家驗收後才能合併；本版開發不改正式main。base仍為`/hanmo-strategy/`。
+CI 對 PR 執行 npm ci、tests、含 TypeScript 檢查的正式 PWA build 與四套 Chromium smoke；PR 不部署。只有 main push 通過後才 configure/upload/deploy 單一 GitHub Pages 根目錄，base 維持 `/hanmo-strategy/`，不再產生 /preview/。玩家在正式版直接遊玩並以後續修補改善。保留 Git 回復點與 V2／V1 本地備份。

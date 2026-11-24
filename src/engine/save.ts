@@ -10,6 +10,8 @@ const ns = typeof import.meta.env !== "undefined" && import.meta.env.VITE_HANMO_
 export const LEGACY_SAVE_KEY = `${ns}-save-v1`;
 export const V2_SAVE_KEY = `${ns}-save-v2`;
 export const SAVE_KEY = `${ns}-save-v3`;
+// Preserved from the retired /preview/ install; never automatically override a live save.
+export const PREVIEW_SAVE_KEY = "hanmo-strategy-preview-save-v3";
 
 const record = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null;
@@ -341,7 +343,29 @@ export function exportSave(): string {
     v3: localStorage.getItem(SAVE_KEY),
     v2: localStorage.getItem(V2_SAVE_KEY),
     v1: localStorage.getItem(LEGACY_SAVE_KEY),
+    previewV3: localStorage.getItem(PREVIEW_SAVE_KEY),
   });
+}
+
+/** One-time, explicit recovery of a previously installed /preview/ game. */
+export function hasPreviewSave(): boolean {
+  try { return localStorage.getItem(PREVIEW_SAVE_KEY) !== null; } catch { return false; }
+}
+export function restorePreviewSave(): { state: GameState | null; error: string } {
+  try {
+    const raw = localStorage.getItem(PREVIEW_SAVE_KEY);
+    if (raw === null || JSON.parse(raw).version !== 3) throw Error("preview missing");
+    const state = deserialize(raw);
+    const current = localStorage.getItem(SAVE_KEY);
+    const backupKey = SAVE_KEY + "-preview-recovery-backup";
+    // Store a valid official V3 save before replacing it; never touch V2/V1 or preview keys.
+    if (current !== null && localStorage.getItem(backupKey) === null)
+      localStorage.setItem(backupKey, current);
+    localStorage.setItem(SAVE_KEY, serialize(state));
+    return { state, error: "" };
+  } catch {
+    return { state: null, error: "無法恢復預覽版進度：資料不存在、已損壞或儲存空間不足。原正式版存檔未主動刪除。" };
+  }
 }
 
 export function restoreV2Backup(): { state: GameState | null; error: string } {
@@ -371,7 +395,7 @@ export function importSaveBackup(raw: string): { state: GameState | null; error:
     const data: unknown = JSON.parse(raw);
     if (!record(data)) throw Error("invalid backup");
     let state: GameState | null = null;
-    for (const [field, version] of [["v3", 3], ["v2", 2], ["v1", 1]] as const) {
+    for (const [field, version] of [["v3", 3], ["v2", 2], ["v1", 1], ["previewV3", 3]] as const) {
       const value = data[field];
       if (typeof value !== "string" || !value) continue;
       const object: unknown = JSON.parse(value);

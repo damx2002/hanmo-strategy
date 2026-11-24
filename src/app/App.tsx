@@ -29,6 +29,8 @@ import {
   restoreV2Backup,
   exportSave,
   importSaveBackup,
+  hasPreviewSave,
+  restorePreviewSave,
 } from "../engine/save";
 import { WorldMap } from "../components/WorldMap";
 import { CityOverview } from "../components/CityOverview";
@@ -304,6 +306,12 @@ export default function App() {
       else setNotice(result.error);
     } catch { setNotice("無法讀取備份，請確認檔案格式及大小。"); }
   }
+  function recoverPreview() {
+    if (!window.confirm("確認從舊預覽版匯入進度？目前正式 V3 存檔將保留復原備份；原正式 V2 與預覽版資料不會刪除。")) return;
+    const result = restorePreviewSave();
+    if (result.state) { setCorrupt(false); enter(result.state); }
+    else setNotice(result.error);
+  }
   function recoverLegacy() {
     if (
       !window.confirm(
@@ -462,6 +470,7 @@ export default function App() {
             {corrupt && (
               <div className="recovery-options">
                 <button onClick={downloadBackup}>匯出現有存檔備份</button>
+              {hasPreviewSave() && <button onClick={recoverPreview}>從舊預覽版恢復進度</button>}
                 <label>匯入 JSON 備份 <input type="file" accept=".json,application/json" onChange={(e) => { void importBackup(e.target.files?.[0]); e.target.value = ""; }} /></label>
                 <button onClick={recoverV2}>確認復原 V2 備份</button>
                 <button onClick={recoverLegacy}>確認復原 V1 備份</button>
@@ -517,6 +526,7 @@ export default function App() {
             </p>
             <div className="save-tools">
               <button onClick={downloadBackup}>匯出存檔備份</button>
+              {hasPreviewSave() && <button onClick={recoverPreview}>從舊預覽版恢復進度</button>}
               <label>匯入備份 <input type="file" accept=".json,application/json" onChange={(e) => { void importBackup(e.target.files?.[0]); e.target.value = ""; }} /></label>
             </div>
             {(resume || corrupt) && (

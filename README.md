@@ -2,7 +2,7 @@
 
 繁體中文、原創 SVG 山河的單機回合制策略遊戲。核心循環包含內政委任、人事、外交、出征、親自守城、友城援軍及統一天下。
 
-本分支為 **可玩候選版，待玩家驗收**。開發分支 `feat/v030-core-game`；未合併 main，正式 GitHub Pages 保持 V0.2.3。功能與驗證進度見 [V030_STATUS.md](V030_STATUS.md)。
+V0.3.0 已準備成為單一正式版本。開發版以 PR/CI 完成規則與瀏覽器驗證，main 只提供正式網址，不再部署公開 /preview/。功能與驗證歷程見 [V030_STATUS.md](V030_STATUS.md)。
 
 ## 開始遊戲
 
@@ -61,13 +61,20 @@ Chromium smoke 使用僅開發用的 playwright-core 和系統 Chromium。本機
 - 最新存檔損壞不靜默回退。可先匯出全部原檔，再明確選復原V2或V1；目前V3另存為復原備份。
 - 單一瀏覽器本機存檔，無跨裝置同步。建議用一個遊戲分頁操作；多個分頁同時改同一進度未提供協調鎖。
 
-## 分支驗收與發布
+## 開發、CI 與正式發布
 
-Workflow對main、開發分支及PR執行型別、引擎測試、建置與四套Chromium回歸。開發分支只產生 `v030-preview` artifact；**只有main才允許Pages部署**。
+- 唯一網站：<https://damx2002.github.io/hanmo-strategy/>，無公開預覽版。
+- Codex 在功能分支集中完成完整改版；開 PR 後自動執行 194 項以上規則測試、正式建置（含型別檢查）、V0.2.1–V0.3.0 Chromium 回歸與真正離線 PWA 測試。
+- **只有 main push 在所有測試通過後自動發布 GitHub Pages**。PR 只測試、不建置兩套網站、不部署。CI 失敗阻擋發布。
+- 不再要求每次發布前手機人工驗收；玩家在正式版實際遊玩，發現問題再修補。大型變更仍保持可回復的 Git commit。
+- GitHub Pages artifact 只含根目錄 `dist`；不再包含 `/preview/`。
 
-GitHub API在本環境回覆Forbidden，Draft PR建立若受阻，使用[分支比較頁](https://github.com/damx2002/hanmo-strategy/compare/main...feat/v030-core-game?expand=1)手動建立Draft PR。玩家驗收前不得合併。
+## 存檔切換與回復
 
-正式站：<https://damx2002.github.io/hanmo-strategy/>。本任務不部署候選版到正式站。
+- V0.2.3 正式進度位於 `hanmo-strategy-save-v2`，V0.3.0 正式進度使用 `hanmo-strategy-save-v3`。首次載入 V2 會在記憶體轉成 V3，**原 V2 字串不會刪除或覆寫**。
+- 舊 `/preview/` 的 `hanmo-strategy-preview-save-v3` 保留於同一瀏覽器 origin；**絕不自動覆寫正式進度**。如果存在，開局畫面有「從舊預覽版恢復進度」可手動遷移；匯入前備份既有正式 V3。
+- 正式版「匯出存檔備份」包含 V3／V2／V1 與已存在的舊預覽 V3。請將 JSON 另存至 NAS；不要清除 Chrome 網站資料或同時用多個分頁編輯同一存檔。
+- PWA 更新必須完成當前戰鬥／月結，並成功儲存後才啟用新版。Git rollback 只回復程式，不能取代個人 JSON 存檔備份。
 
 ## 已知精修範圍
 
@@ -75,15 +82,6 @@ GitHub API在本環境回覆Forbidden，Draft PR建立若受阻，使用[分支�
 
 手機驗證是Chromium viewport／觸控自動化，**本次沒有重新操作實體Samsung S25 Ultra**。美術、動畫和細部平衡留待玩家回饋精修。歷次更新保留於 [CHANGELOG.md](CHANGELOG.md)。
 
-## PWA 與隔離預覽（V0.3.0 候選版）
+## PWA 與離線遊玩
 
-此分支提供原創 App 圖示、Manifest、可明確控制更新的 Service Worker、離線遊戲程式快取與本機自動存檔。手機安裝需要由 HTTPS 公開託管，單純下載 Actions artifact 並不能直接在 Android 安裝成正式 PWA。
-
-- 正式版：`npm run build`，路徑 `/hanmo-strategy/`，本機存檔 `hanmo-strategy-save-v3`。
-- 獨立預覽包：`HANMO_BASE_PATH=/hanmo-strategy-preview/ VITE_HANMO_CHANNEL=preview npm run build`，路徑 `/hanmo-strategy-preview/`，本機存檔 `hanmo-strategy-preview-save-v3`。
-- 預覽包可在 GitHub Actions 的 `v030-preview` artifact 下載，**尚未提供公開 HTTPS 網址**；不得將預覽包直接覆蓋正式站。
-- 正式與預覽 Service Worker 以不同 scope 和 cache namespace 隔離。相同 github.io origin 下，localStorage 不以路徑隔離，故使用不同 key。
-- 預覽版如需測試舊版存檔，請從正式遊戲匯出 JSON，再在預覽版明確匯入；預覽不自動讀取正式存檔。
-- 首次需要連線以完成 PWA 安裝與靜態資源快取，之後可在離線時開局或續玩。未開啟雲端同步，移除 App／清除網站資料可能使進度遺失。
-- 新版下載完成會顯示「儲存並更新」，若正在戰鬥、守城、月結或有對話框則暫停手動更新。
-- CI 會驗證原遊戲回歸、PWA 離線遊戲，以及預覽版和正式版的 localStorage 隔離，只有 main 可以發布正式 Pages。
+正式版在 `/hanmo-strategy/` 提供 Manifest、192／512 PNG 圖示、Service Worker 靜態快取、自動本機存檔及「儲存並更新」機制。Android Chrome 由正式網址安裝即可單獨啟動；首次安裝需連線，之後離線可開局、續玩。沒有雲端同步，清除網站資料或移除 App 可能使進度遺失；請定期匯出 JSON。舊預覽版網站停止更新，不再使用其獨立 Service Worker。
