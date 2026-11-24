@@ -2,7 +2,7 @@
 
 繁體中文、原創 SVG 山河的單機回合制策略遊戲。核心循環包含內政委任、人事、外交、出征、親自守城、友城援軍及統一天下。
 
-V0.3.0 已準備成為單一正式版本。開發版以 PR/CI 完成規則與瀏覽器驗證，main 只提供正式網址，不再部署公開 /preview/。功能與驗證歷程見 [V030_STATUS.md](V030_STATUS.md)。
+V0.3.0 已於 2026-11-24 正式發布。main 只提供正式網址，不再部署公開 /preview/。後續開發與發布以 [AGENTS.md](AGENTS.md) 為準；功能與驗證歷程見 [V030_STATUS.md](V030_STATUS.md)。
 
 ## 開始遊戲
 
@@ -36,7 +36,7 @@ npm run test:browser
 
 Chromium smoke 使用僅開發用的 playwright-core 和系統 Chromium。本機預設 `/usr/bin/chromium`，可設定 `CHROMIUM_PATH`；CI 使用 `/usr/bin/google-chrome`。不下載或打包瀏覽器。測試自行啟停 4174 的正式預覽，可用 `SMOKE_PORT` 改埠。
 
-本機最終驗證：194項引擎／回歸測試、typecheck、正式建置、四套Chromium smoke全部通過；完整及正式依賴audit均0漏洞。詳細種子、戰役月數與限制見V030_STATUS.md。
+V0.3.0 正式發布 CI：197 項測試（14 個測試檔）、TypeScript、正式 PWA 建置、Chromium 回歸及離線續玩均通過。早期候選版完整及正式依賴 audit 均為 0 漏洞；詳細種子、戰役月數與限制見 V030_STATUS.md。
 
 ## 操作
 
@@ -62,6 +62,8 @@ Chromium smoke 使用僅開發用的 playwright-core 和系統 Chromium。本機
 - 單一瀏覽器本機存檔，無跨裝置同步。建議用一個遊戲分頁操作；多個分頁同時改同一進度未提供協調鎖。
 
 ## 開發、CI 與正式發布
+
+完整長期規範見 [AGENTS.md](AGENTS.md)，優先於舊有預覽及人工驗收流程。一般改版測試成功後直接合併並發布；高風險資料操作仍須先備份與取得確認。
 
 - 唯一網站：<https://damx2002.github.io/hanmo-strategy/>，無公開預覽版。
 - Codex 在功能分支集中完成完整改版；開 PR 後自動執行 194 項以上規則測試、正式建置（含型別檢查）、V0.2.1–V0.3.0 Chromium 回歸與真正離線 PWA 測試。
